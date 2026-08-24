@@ -1,1 +1,15 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: handoff-db
+    environment:
+      POSTGRES_DB: handoff
+      POSTGRES_USER: handoff_user
+      POSTGRES_PASSWORD: handoff_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - handoff_data:/var/lib/postgresql/data
 
+volumes:
+  handoff_data:
