@@ -3,10 +3,13 @@ import os
 
 from dotenv import load_dotenv
 from google import genai
+
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from backend.database import engine
-from backend.models import Procedure
+from backend.models import Procedure, Gap
+
 
 load_dotenv()
 
@@ -36,7 +39,8 @@ def save_procedure(procedure_data: dict):
             title=procedure_data["title"],
             steps=json.dumps(procedure_data["steps"]),
             warnings=json.dumps(procedure_data["warnings"]),
-            embedding=embedding
+            embedding=embedding,
+            status="approved"
         )
 
         session.add(procedure)
@@ -53,8 +57,74 @@ def get_procedures():
         return [
             {
                 "id": procedure.id,
-                "title": procedure.title
+                "title": procedure.title,
+                "status": procedure.status,
+                "last_confirmed": procedure.last_confirmed
             }
             for procedure in procedures
         ]
-        
+
+
+def find_best_matching_procedure(question: str):
+    embedding_response = client.models.embed_content(
+        model="gemini-embedding-2",
+        contents=question
+    )
+
+    question_embedding = (
+        embedding_response.embeddings[0].values
+    )
+
+    with Session(engine) as session:
+        distance = Procedure.embedding.cosine_distance(
+            question_embedding
+        )
+
+        result = session.execute(
+            select(
+                Procedure,
+                distance.label("distance")
+            )
+            .where(
+                Procedure.status == "approved"
+            )
+            .order_by(distance)
+            .limit(1)
+        ).first()
+
+        if result is None:
+            return None, None
+
+        procedure, distance_value = result
+
+        similarity = 1 - distance_value
+
+        return procedure, similarity
+
+
+def log_gap(question: str, similarity: float):
+    with Session(engine) as session:
+        gap = Gap(
+            question=question,
+            similarity=str(similarity)
+        )
+
+        session.add(gap)
+        session.commit()
+        session.refresh(gap)
+
+        return gap
+
+
+def get_gaps():
+    with Session(engine) as session:
+        gaps = session.query(Gap).all()
+
+        return [
+            {
+                "id": gap.id,
+                "question": gap.question,
+                "similarity": gap.similarity
+            }
+            for gap in gaps
+        ]
