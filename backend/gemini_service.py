@@ -34,3 +34,30 @@ Owner explanation:
     )
 
     return json.loads(response.text)
+
+def answer_question_from_procedure(question: str, procedure):
+    procedure_text = (
+        f"Title: {procedure.title}\n"
+        f"Steps: {procedure.steps}\n"
+        f"Warnings: {procedure.warnings}"
+    )
+
+    response = client.models.generate_content(
+        model="gemini-3.6-flash",
+        contents=f"""
+You are answering an employee question using ONLY the procedure below.
+
+Do not use outside knowledge.
+Do not guess.
+If the procedure does not contain the answer, say:
+"This information is not documented in the retrieved procedure."
+
+Procedure:
+{procedure_text}
+
+Employee question:
+{question}
+"""
+    )
+
+    return response.text
