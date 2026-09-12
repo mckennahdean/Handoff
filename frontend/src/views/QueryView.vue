@@ -1,83 +1,15 @@
 <script setup>
 import { ref } from 'vue'
 
-/*
- * Prototype question entered by the employee.
- *
- * The completed application will send this value to:
- * POST /api/query
- */
 const question = ref('')
-
-/*
- * Tracks whether the prototype is currently showing a response.
- */
 const hasAsked = ref(false)
-
-/*
- * Prototype response state.
- *
- * Possible values:
- * - answered
- * - not_documented
- */
 const responseState = ref('')
-
-/*
- * Prevents the button from being submitted repeatedly.
- */
 const isLoading = ref(false)
-
-/*
- * Holds the response displayed to the user.
- */
 const answer = ref('')
-
-/*
- * Procedure used as the source for the prototype answer.
- *
- * The completed backend will return grounded source information
- * from the approved knowledge base.
- */
 const sourceProcedure = ref('')
-
-/*
- * Documentation gap message shown when Handoff cannot
- * confidently answer a question.
- */
 const gapMessage = ref('')
 
-/*
- * Submit a question to Handoff.
- *
- * This currently uses prototype responses so the frontend can
- * be demonstrated before the FastAPI backend is connected.
- *
- * Future implementation:
- *
- * POST /api/query
- *
- * Request:
- * {
- *   "question": "..."
- * }
- *
- * Response:
- * {
- *   "status": "answered",
- *   "answer": "...",
- *   "sources": [...]
- * }
- *
- * OR:
- *
- * {
- *   "status": "not_documented",
- *   "message": "...",
- *   "gap_id": "..."
- * }
- */
-const askHandoff = () => {
+const askHandoff = async () => {
   if (!question.value.trim()) {
     return
   }
@@ -89,48 +21,47 @@ const askHandoff = () => {
   sourceProcedure.value = ''
   gapMessage.value = ''
 
-  /*
-   * Temporary delay to make the prototype feel like a real
-   * request is being processed.
-   */
-  setTimeout(() => {
-    const normalizedQuestion = question.value.toLowerCase()
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/query', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        question: question.value.trim()
+      })
+    })
 
-    /*
-     * If the question relates to closing the store, demonstrate
-     * an answer grounded in the newly approved Store Closed
-     * procedure.
-     */
-    if (
-      normalizedQuestion.includes('close') ||
-      normalizedQuestion.includes('closing') ||
-      normalizedQuestion.includes('store closed')
-    ) {
-      responseState.value = 'answered'
+    if (!response.ok) {
+      throw new Error('Unable to get an answer from Handoff.')
+    }
 
-      answer.value =
-        'Before closing the store, verify that all customers have been assisted, complete the required closing tasks, secure the store, and confirm that the closing process is complete.'
+    const data = await response.json()
 
-      sourceProcedure.value = 'Store Closed'
-    } else {
-      /*
-       * For questions that are not represented by the prototype
-       * knowledge base, demonstrate the required abstention state.
-       */
-      responseState.value = 'not_documented'
+    responseState.value = data.status
 
+    if (data.status === 'answered') {
+      answer.value = data.answer
+      sourceProcedure.value = data.source_procedure
+    } else if (data.status === 'not_documented') {
       gapMessage.value =
-        'I could not find an approved procedure that confidently answers this question. The information may not be documented yet.'
+        data.message ||
+        'This information is not documented in the approved procedures.'
     }
 
     hasAsked.value = true
+  } catch (error) {
+    responseState.value = 'not_documented'
+    gapMessage.value =
+      'Handoff could not connect to the backend. Please try again.'
+
+    hasAsked.value = true
+    console.error(error)
+  } finally {
     isLoading.value = false
-  }, 700)
+  }
 }
 
-/*
- * Clear the current question and response.
- */
 const clearQuestion = () => {
   question.value = ''
   hasAsked.value = false
@@ -140,10 +71,6 @@ const clearQuestion = () => {
   gapMessage.value = ''
 }
 
-/*
- * Put an example question into the input so the user can
- * quickly demonstrate the Ask Handoff workflow.
- */
 const useExample = () => {
   question.value = 'What should I do when closing the store?'
 }
@@ -152,11 +79,7 @@ const useExample = () => {
 <template>
   <main class="query-page">
 
-    <!-- =========================================
-         Page Header
-         ========================================= -->
     <section class="page-header">
-
       <div>
         <p class="eyebrow">Handoff Knowledge Assistant</p>
 
@@ -168,15 +91,9 @@ const useExample = () => {
           procedures.
         </p>
       </div>
-
     </section>
 
-
-    <!-- =========================================
-         Question Card
-         ========================================= -->
     <section class="question-card">
-
       <div class="question-heading">
 
         <div class="assistant-icon">
@@ -195,7 +112,6 @@ const useExample = () => {
 
       </div>
 
-
       <form @submit.prevent="askHandoff">
 
         <label for="question">
@@ -209,7 +125,6 @@ const useExample = () => {
           placeholder="For example: What should I do when closing the store?"
           :disabled="isLoading"
         ></textarea>
-
 
         <div class="question-actions">
 
@@ -253,13 +168,8 @@ const useExample = () => {
         </div>
 
       </form>
-
     </section>
 
-
-    <!-- =========================================
-         Answered State
-         ========================================= -->
     <section
       v-if="hasAsked && responseState === 'answered'"
       class="response-card answered-card"
@@ -283,17 +193,12 @@ const useExample = () => {
 
       </div>
 
-
       <div class="answer-content">
         <p>
           {{ answer }}
         </p>
       </div>
 
-
-      <!-- =========================================
-           Source Procedure
-           ========================================= -->
       <div class="source-section">
 
         <span class="source-label">
@@ -321,7 +226,6 @@ const useExample = () => {
 
       </div>
 
-
       <div class="grounding-note">
 
         <span>i</span>
@@ -335,10 +239,6 @@ const useExample = () => {
 
     </section>
 
-
-    <!-- =========================================
-         Not Documented State
-         ========================================= -->
     <section
       v-if="hasAsked && responseState === 'not_documented'"
       class="response-card gap-card"
@@ -362,7 +262,6 @@ const useExample = () => {
 
       </div>
 
-
       <div class="gap-content">
 
         <p>
@@ -376,7 +275,6 @@ const useExample = () => {
 
       </div>
 
-
       <div class="gap-status">
 
         <div class="gap-status-icon">
@@ -389,8 +287,8 @@ const useExample = () => {
           </strong>
 
           <p>
-            The completed application will record this question
-            through the documentation gap service.
+            This question has been recorded through the
+            documentation gap service.
           </p>
         </div>
 
@@ -398,10 +296,6 @@ const useExample = () => {
 
     </section>
 
-
-    <!-- =========================================
-         How Ask Handoff Works
-         ========================================= -->
     <section class="how-it-works">
 
       <div class="section-heading">
@@ -415,7 +309,6 @@ const useExample = () => {
         </h2>
 
       </div>
-
 
       <div class="process-grid">
 
@@ -436,7 +329,6 @@ const useExample = () => {
 
         </article>
 
-
         <article class="process-card">
 
           <span class="process-number">
@@ -453,7 +345,6 @@ const useExample = () => {
           </p>
 
         </article>
-
 
         <article class="process-card">
 
@@ -477,33 +368,10 @@ const useExample = () => {
 
     </section>
 
-
-    <!-- =========================================
-         Prototype Notice
-         ========================================= -->
-    <section class="prototype-note">
-
-      <strong>
-        Prototype note
-      </strong>
-
-      <p>
-        The response shown here is currently simulated for
-        frontend demonstration. The completed application will
-        connect this interface to the Handoff API using
-        POST /api/query.
-      </p>
-
-    </section>
-
   </main>
 </template>
 
 <style scoped>
-/* =========================================
-   Page Layout
-   ========================================= */
-
 .query-page {
   min-height: calc(100vh - 72px);
   padding: 42px 24px 70px;
@@ -538,11 +406,6 @@ const useExample = () => {
   font-size: 15px;
   line-height: 1.6;
 }
-
-
-/* =========================================
-   Question Card
-   ========================================= */
 
 .question-card {
   max-width: 1000px;
@@ -621,11 +484,6 @@ const useExample = () => {
   opacity: 0.7;
 }
 
-
-/* =========================================
-   Question Actions
-   ========================================= */
-
 .question-actions {
   margin-top: 14px;
   display: flex;
@@ -679,11 +537,6 @@ const useExample = () => {
   opacity: 0.6;
   cursor: not-allowed;
 }
-
-
-/* =========================================
-   Response Cards
-   ========================================= */
 
 .response-card {
   max-width: 1000px;
@@ -746,11 +599,6 @@ const useExample = () => {
   font-size: 21px;
 }
 
-
-/* =========================================
-   Answer
-   ========================================= */
-
 .answer-content {
   margin: 20px 0;
   padding: 20px;
@@ -764,11 +612,6 @@ const useExample = () => {
   font-size: 15px;
   line-height: 1.7;
 }
-
-
-/* =========================================
-   Source
-   ========================================= */
 
 .source-section {
   margin-top: 20px;
@@ -819,11 +662,6 @@ const useExample = () => {
   font-size: 12px;
 }
 
-
-/* =========================================
-   Grounding Note
-   ========================================= */
-
 .grounding-note {
   margin-top: 18px;
   padding: 13px;
@@ -853,11 +691,6 @@ const useExample = () => {
   font-size: 12px;
   line-height: 1.5;
 }
-
-
-/* =========================================
-   Documentation Gap
-   ========================================= */
 
 .gap-content {
   margin: 20px 0;
@@ -911,11 +744,6 @@ const useExample = () => {
   color: #80766e;
   font-size: 12px;
 }
-
-
-/* =========================================
-   How It Works
-   ========================================= */
 
 .how-it-works {
   max-width: 1000px;
@@ -973,37 +801,6 @@ const useExample = () => {
   font-size: 12px;
   line-height: 1.6;
 }
-
-
-/* =========================================
-   Prototype Notice
-   ========================================= */
-
-.prototype-note {
-  max-width: 1000px;
-  margin: 24px auto 0;
-  padding: 16px;
-  border: 1px dashed #d8d0c6;
-  border-radius: 9px;
-  background: #fbf9f5;
-}
-
-.prototype-note strong {
-  color: #6b665e;
-  font-size: 12px;
-}
-
-.prototype-note p {
-  margin: 5px 0 0;
-  color: #88827a;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-
-/* =========================================
-   Responsive Layout
-   ========================================= */
 
 @media (max-width: 760px) {
   .query-page {
