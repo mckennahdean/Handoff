@@ -1158,3 +1158,4 @@ const clearFilters = () => {
     width: 100%;
   }
 }
+</style>

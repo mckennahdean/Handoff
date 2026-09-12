@@ -659,3 +659,4 @@ const addProcedure = () => {
     text-align: center;
   }
 }
+</style>
