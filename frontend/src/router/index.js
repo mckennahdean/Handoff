@@ -3,13 +3,18 @@ import { createRouter, createWebHistory } from 'vue-router'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
 
-  // Routes for the main Handoff frontend screens
   routes: [
-    // Main landing page
+    // Login screen
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('../views/LoginView.vue')
+    },
+
+    // Default page - redirects visitors to the login screen
     {
       path: '/',
-      name: 'home',
-      component: () => import('../views/HomeView.vue')
+      redirect: '/login'
     },
 
     // Owner procedure management
