@@ -13,7 +13,7 @@ client = genai.Client(
 
 def structure_procedure(text: str):
     response = client.models.generate_content(
-        model="gemini-3.6-flash",
+        model="gemini-3.1-flash-lite",
         contents=f"""
 You are helping a small business document procedures.
 

@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String, Text, DateTime
+from sqlalchemy import String, Text, DateTime, Float, Integer
 
 from pgvector.sqlalchemy import Vector
 
@@ -33,12 +33,17 @@ class Procedure(Base):
 
     status: Mapped[str] = mapped_column(
         String(50),
-        default="approved"
+        default="pending"
+    )
+
+    version: Mapped[int] = mapped_column(
+        Integer,
+        default=1
     )
 
     last_confirmed: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow
+        default=lambda: datetime.now(timezone.utc)
     )
 
 
@@ -53,6 +58,16 @@ class Gap(Base):
         Text
     )
 
-    similarity: Mapped[str] = mapped_column(
-        String(50)
+    similarity: Mapped[float] = mapped_column(
+        Float
+    )
+
+    frequency_count: Mapped[int] = mapped_column(
+        Integer,
+        default=1
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc)
     )
