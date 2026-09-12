@@ -1,117 +1,135 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-/*
- * Get the current user's role from the frontend prototype session.
- */
 const role = localStorage.getItem('userRole')
 
-/*
- * Determine whether the current user is an Owner.
- */
 const isOwner = computed(() => {
   return role === 'owner'
 })
 
-/*
- * Temporary prototype data.
- *
- * These represent procedures that would eventually come from:
- * GET /api/procedures
- *
- * Procedures created through the Capture -> Review -> Approval
- * workflow are added to this list from localStorage below.
- */
-const procedures = ref([
-  {
-    id: 1,
-    title: 'Customer Returns',
-    status: 'Approved',
-    lastConfirmed: 'August 30, 2026'
-  },
-  {
-    id: 2,
-    title: 'Opening Procedure',
-    status: 'Approved',
-    lastConfirmed: 'August 28, 2026'
-  },
-  {
-    id: 3,
-    title: 'New Employee Setup',
-    status: 'Pending',
-    lastConfirmed: 'August 25, 2026'
+const procedures = ref([])
+const isLoading = ref(true)
+const errorMessage = ref('')
+
+const formatDate = (dateValue) => {
+  if (!dateValue) {
+    return 'Not yet confirmed'
   }
-])
 
-/*
- * Load procedures that have passed the Owner approval gate.
- *
- * ProcedureReviewView.vue stores approved procedures in:
- * localStorage.handoffProcedures
- *
- * This allows the frontend prototype to demonstrate the complete
- * workflow without requiring the FastAPI backend yet.
- */
-const storedProcedures = JSON.parse(
-  localStorage.getItem('handoffProcedures') || '[]'
-)
+  const date = new Date(dateValue)
 
-/*
- * Add stored approved procedures to the prototype list.
- *
- * The title check prevents the same procedure from appearing twice
- * if the page is refreshed.
- */
-storedProcedures.forEach((storedProcedure) => {
-  const alreadyExists = procedures.value.some(
-    (procedure) => procedure.title === storedProcedure.title
-  )
-
-  if (!alreadyExists) {
-    procedures.value.push(storedProcedure)
+  if (Number.isNaN(date.getTime())) {
+    return dateValue
   }
-})
 
-/*
- * Employees should only see approved procedures.
- *
- * Owners can see all procedures, including procedures that are
- * still pending review.
- */
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
+const formatStatus = (status) => {
+  if (!status) {
+    return 'Unknown'
+  }
+
+  return status
+    .replaceAll('_', ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+const statusClass = (status) => {
+  if (!status) {
+    return ''
+  }
+
+  const normalizedStatus = status
+    .toLowerCase()
+    .replaceAll('_', '-')
+    .replaceAll(' ', '-')
+
+  if (normalizedStatus === 'approved') {
+    return 'approved'
+  }
+
+  if (normalizedStatus === 'pending') {
+    return 'pending'
+  }
+
+  if (normalizedStatus === 'needs-changes') {
+    return 'needs'
+  }
+
+  return ''
+}
+
+const loadProcedures = async () => {
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    const response = await fetch(
+      'http://127.0.0.1:8000/api/procedures'
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(
+        data.detail || 'Unable to load procedures.'
+      )
+    }
+
+    procedures.value = Array.isArray(data)
+      ? data
+      : []
+  } catch (error) {
+    console.error(error)
+
+    errorMessage.value =
+      error.message ||
+      'Handoff could not connect to the procedure service.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
 const visibleProcedures = computed(() => {
   if (isOwner.value) {
     return procedures.value
   }
 
   return procedures.value.filter(
-    (procedure) => procedure.status === 'Approved'
+    (procedure) =>
+      procedure.status?.toLowerCase() === 'approved'
   )
 })
 
-/*
- * Calculate procedure totals for the Owner summary.
- */
 const approvedCount = computed(() => {
   return procedures.value.filter(
-    (procedure) => procedure.status === 'Approved'
+    (procedure) =>
+      procedure.status?.toLowerCase() === 'approved'
   ).length
 })
 
 const pendingCount = computed(() => {
   return procedures.value.filter(
-    (procedure) => procedure.status === 'Pending'
+    (procedure) =>
+      procedure.status?.toLowerCase() === 'pending'
   ).length
 })
 
-/*
- * Send the Owner to the Capture Procedure page.
- */
 const addProcedure = () => {
   router.push('/capture-procedure')
 }
+
+onMounted(() => {
+  loadProcedures()
+})
 </script>
 
 <template>
@@ -143,7 +161,6 @@ const addProcedure = () => {
       </button>
     </section>
 
-
     <!-- =========================================
          Employee Page Header
          ========================================= -->
@@ -163,169 +180,241 @@ const addProcedure = () => {
       </div>
     </section>
 
-
     <!-- =========================================
-         Owner Procedure Summary
+         Loading State
          ========================================= -->
     <section
-      v-if="isOwner"
-      class="summary"
+      v-if="isLoading"
+      class="status-message"
     >
-      <div class="summary-item">
-        <span class="summary-label">
-          Total Procedures
-        </span>
+      <strong>Loading procedures...</strong>
 
-        <strong>
-          {{ procedures.length }}
-        </strong>
-      </div>
-
-      <div class="summary-item">
-        <span class="summary-label">
-          Approved
-        </span>
-
-        <strong>
-          {{ approvedCount }}
-        </strong>
-      </div>
-
-      <div class="summary-item">
-        <span class="summary-label">
-          Pending Review
-        </span>
-
-        <strong>
-          {{ pendingCount }}
-        </strong>
-      </div>
+      <p>
+        Handoff is retrieving the current knowledge base.
+      </p>
     </section>
 
-
     <!-- =========================================
-         Employee Procedure Summary
+         Error State
          ========================================= -->
     <section
-      v-else
-      class="employee-summary"
+      v-else-if="errorMessage"
+      class="error-message"
     >
-      <div class="employee-summary-item">
-        <span class="summary-label">
-          Available Procedures
-        </span>
-
-        <strong>
-          {{ visibleProcedures.length }}
-        </strong>
-
-        <p>
-          Approved and available for your use
-        </p>
-      </div>
-    </section>
-
-
-    <!-- =========================================
-         Procedure List
-         ========================================= -->
-    <section class="procedure-list">
-
-      <article
-        v-for="procedure in visibleProcedures"
-        :key="procedure.id"
-        class="procedure-card"
-      >
-
-        <div class="procedure-info">
-
-          <div class="title-row">
-
-            <h2>
-              {{ procedure.title }}
-            </h2>
-
-            <!-- Owner sees the actual procedure status -->
-            <span
-              v-if="isOwner"
-              class="status"
-              :class="procedure.status.toLowerCase()"
-            >
-              {{ procedure.status }}
-            </span>
-
-            <!-- Employees only see approved procedures -->
-            <span
-              v-else
-              class="status approved"
-            >
-              Approved
-            </span>
-
-          </div>
-
-          <p>
-            Last confirmed: {{ procedure.lastConfirmed }}
-          </p>
-
-        </div>
-
-
-        <!-- Owner-only review action -->
-        <RouterLink
-          v-if="isOwner"
-          :to="{
-            path: '/procedure-review',
-            query: { id: procedure.id }
-          }"
-          class="review-button"
-        >
-          Review
-        </RouterLink>
-
-      </article>
-
-    </section>
-
-
-    <!-- =========================================
-         Employee Information
-         ========================================= -->
-    <section
-      v-if="!isOwner"
-      class="employee-note"
-    >
-      <div class="note-icon">
-        i
+      <div class="error-icon">
+        !
       </div>
 
       <div>
-        <strong>
-          Approved knowledge
-        </strong>
+        <strong>Unable to load procedures</strong>
 
         <p>
-          These procedures have been reviewed and approved
-          by your organization's owner. If you cannot find
-          the information you need, ask Handoff a question.
+          {{ errorMessage }}
         </p>
+
+        <button
+          type="button"
+          class="retry-button"
+          @click="loadProcedures"
+        >
+          Try Again
+        </button>
       </div>
     </section>
 
+    <template v-else>
 
-    <!-- =========================================
-         Prototype Notice
-         ========================================= -->
-    <section class="prototype-note">
-      <strong>Prototype note</strong>
+      <!-- =========================================
+           Owner Procedure Summary
+           ========================================= -->
+      <section
+        v-if="isOwner"
+        class="summary"
+      >
+        <div class="summary-item">
+          <span class="summary-label">
+            Total Procedures
+          </span>
 
-      <p>
-        Procedure data is currently stored locally for the
-        frontend prototype. The completed application will
-        retrieve approved procedures from the Handoff API
-        and PostgreSQL knowledge base.
-      </p>
-    </section>
+          <strong>
+            {{ procedures.length }}
+          </strong>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">
+            Approved
+          </span>
+
+          <strong>
+            {{ approvedCount }}
+          </strong>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">
+            Pending Review
+          </span>
+
+          <strong>
+            {{ pendingCount }}
+          </strong>
+        </div>
+      </section>
+
+      <!-- =========================================
+           Employee Procedure Summary
+           ========================================= -->
+      <section
+        v-else
+        class="employee-summary"
+      >
+        <div class="employee-summary-item">
+          <span class="summary-label">
+            Available Procedures
+          </span>
+
+          <strong>
+            {{ visibleProcedures.length }}
+          </strong>
+
+          <p>
+            Approved and available for your use
+          </p>
+        </div>
+      </section>
+
+      <!-- =========================================
+           Empty State
+           ========================================= -->
+      <section
+        v-if="visibleProcedures.length === 0"
+        class="empty-state"
+      >
+        <strong>
+          {{
+            isOwner
+              ? 'No procedures have been added yet.'
+              : 'No approved procedures are available yet.'
+          }}
+        </strong>
+
+        <p>
+          {{
+            isOwner
+              ? 'Capture and approve a procedure to begin building the Handoff knowledge base.'
+              : 'Approved procedures will appear here after they are reviewed by the Owner.'
+          }}
+        </p>
+
+        <button
+          v-if="isOwner"
+          type="button"
+          class="add-button"
+          @click="addProcedure"
+        >
+          + Add Procedure
+        </button>
+      </section>
+
+      <!-- =========================================
+           Procedure List
+           ========================================= -->
+      <section
+        v-else
+        class="procedure-list"
+      >
+
+        <article
+          v-for="procedure in visibleProcedures"
+          :key="procedure.id"
+          class="procedure-card"
+        >
+
+          <div class="procedure-info">
+
+            <div class="title-row">
+
+              <h2>
+                {{ procedure.title }}
+              </h2>
+
+              <span
+                v-if="isOwner"
+                class="status"
+                :class="statusClass(procedure.status)"
+              >
+                {{ formatStatus(procedure.status) }}
+              </span>
+
+              <span
+                v-else
+                class="status approved"
+              >
+                Approved
+              </span>
+
+            </div>
+
+            <p>
+              Last confirmed:
+              {{ formatDate(procedure.last_confirmed) }}
+            </p>
+
+          </div>
+
+          <RouterLink
+            v-if="isOwner"
+            :to="{
+              path: '/procedure-review',
+              query: { id: procedure.id }
+            }"
+            class="review-button"
+          >
+            Review
+          </RouterLink>
+
+        </article>
+
+      </section>
+
+      <!-- =========================================
+           Employee Information
+           ========================================= -->
+      <section
+        v-if="!isOwner && visibleProcedures.length > 0"
+        class="employee-note"
+      >
+        <div class="note-icon">
+          i
+        </div>
+
+        <div>
+          <strong>
+            Approved knowledge
+          </strong>
+
+          <p>
+            These procedures have been reviewed and approved
+            by your organization's owner. If you cannot find
+            the information you need, ask Handoff a question.
+          </p>
+        </div>
+      </section>
+
+      <!-- =========================================
+           Live Data Notice
+           ========================================= -->
+      <section class="prototype-note">
+        <strong>Connected knowledge base</strong>
+
+        <p>
+          Procedure data is retrieved from the Handoff API
+          and PostgreSQL knowledge base.
+        </p>
+      </section>
+
+    </template>
 
   </main>
 </template>
@@ -386,6 +475,82 @@ const addProcedure = () => {
 
 .add-button:hover {
   background: #204d43;
+}
+
+
+/* =========================================
+   Loading / Error / Empty States
+   ========================================= */
+
+.status-message,
+.error-message,
+.empty-state {
+  max-width: 1120px;
+  margin: 0 auto 24px;
+  padding: 22px;
+  border: 1px solid #e2ddd5;
+  border-radius: 10px;
+  background: white;
+}
+
+.status-message strong,
+.empty-state strong {
+  color: #173c35;
+  font-size: 14px;
+}
+
+.status-message p,
+.empty-state p {
+  margin: 5px 0 0;
+  color: #75817c;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.empty-state .add-button {
+  margin-top: 16px;
+}
+
+.error-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-color: #e6c4b5;
+  background: #fbf1ec;
+}
+
+.error-icon {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #b85f34;
+  color: white;
+  font-weight: 700;
+}
+
+.error-message strong {
+  color: #9a4f2d;
+  font-size: 14px;
+}
+
+.error-message p {
+  margin: 4px 0 10px;
+  color: #74594c;
+  font-size: 13px;
+}
+
+.retry-button {
+  padding: 8px 13px;
+  border: 1px solid #d7c2b7;
+  border-radius: 7px;
+  background: white;
+  color: #8f4d2e;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 
@@ -596,7 +761,7 @@ const addProcedure = () => {
 
 
 /* =========================================
-   Prototype Notice
+   Knowledge Base Notice
    ========================================= */
 
 .prototype-note {
