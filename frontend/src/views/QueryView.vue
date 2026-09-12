@@ -1,429 +1,1046 @@
+<script setup>
+import { ref } from 'vue'
+
+/*
+ * Prototype question entered by the employee.
+ *
+ * The completed application will send this value to:
+ * POST /api/query
+ */
+const question = ref('')
+
+/*
+ * Tracks whether the prototype is currently showing a response.
+ */
+const hasAsked = ref(false)
+
+/*
+ * Prototype response state.
+ *
+ * Possible values:
+ * - answered
+ * - not_documented
+ */
+const responseState = ref('')
+
+/*
+ * Prevents the button from being submitted repeatedly.
+ */
+const isLoading = ref(false)
+
+/*
+ * Holds the response displayed to the user.
+ */
+const answer = ref('')
+
+/*
+ * Procedure used as the source for the prototype answer.
+ *
+ * The completed backend will return grounded source information
+ * from the approved knowledge base.
+ */
+const sourceProcedure = ref('')
+
+/*
+ * Documentation gap message shown when Handoff cannot
+ * confidently answer a question.
+ */
+const gapMessage = ref('')
+
+/*
+ * Submit a question to Handoff.
+ *
+ * This currently uses prototype responses so the frontend can
+ * be demonstrated before the FastAPI backend is connected.
+ *
+ * Future implementation:
+ *
+ * POST /api/query
+ *
+ * Request:
+ * {
+ *   "question": "..."
+ * }
+ *
+ * Response:
+ * {
+ *   "status": "answered",
+ *   "answer": "...",
+ *   "sources": [...]
+ * }
+ *
+ * OR:
+ *
+ * {
+ *   "status": "not_documented",
+ *   "message": "...",
+ *   "gap_id": "..."
+ * }
+ */
+const askHandoff = () => {
+  if (!question.value.trim()) {
+    return
+  }
+
+  isLoading.value = true
+  hasAsked.value = false
+  responseState.value = ''
+  answer.value = ''
+  sourceProcedure.value = ''
+  gapMessage.value = ''
+
+  /*
+   * Temporary delay to make the prototype feel like a real
+   * request is being processed.
+   */
+  setTimeout(() => {
+    const normalizedQuestion = question.value.toLowerCase()
+
+    /*
+     * If the question relates to closing the store, demonstrate
+     * an answer grounded in the newly approved Store Closed
+     * procedure.
+     */
+    if (
+      normalizedQuestion.includes('close') ||
+      normalizedQuestion.includes('closing') ||
+      normalizedQuestion.includes('store closed')
+    ) {
+      responseState.value = 'answered'
+
+      answer.value =
+        'Before closing the store, verify that all customers have been assisted, complete the required closing tasks, secure the store, and confirm that the closing process is complete.'
+
+      sourceProcedure.value = 'Store Closed'
+    } else {
+      /*
+       * For questions that are not represented by the prototype
+       * knowledge base, demonstrate the required abstention state.
+       */
+      responseState.value = 'not_documented'
+
+      gapMessage.value =
+        'I could not find an approved procedure that confidently answers this question. The information may not be documented yet.'
+    }
+
+    hasAsked.value = true
+    isLoading.value = false
+  }, 700)
+}
+
+/*
+ * Clear the current question and response.
+ */
+const clearQuestion = () => {
+  question.value = ''
+  hasAsked.value = false
+  responseState.value = ''
+  answer.value = ''
+  sourceProcedure.value = ''
+  gapMessage.value = ''
+}
+
+/*
+ * Put an example question into the input so the user can
+ * quickly demonstrate the Ask Handoff workflow.
+ */
+const useExample = () => {
+  question.value = 'What should I do when closing the store?'
+}
+</script>
+
 <template>
-  <main class="query">
-    <!-- Page heading -->
+  <main class="query-page">
+
+    <!-- =========================================
+         Page Header
+         ========================================= -->
     <section class="page-header">
-      <p class="eyebrow">Employee Workspace</p>
-      <h1>Ask Handoff</h1>
-      <p>
-        Ask a question about a business procedure and receive an answer based
-        on approved documentation.
-      </p>
-    </section>
 
-    <!-- Employee question form -->
-    <section class="query-card">
-      <div class="card-heading">
-        <div class="question-icon">?</div>
+      <div>
+        <p class="eyebrow">Handoff Knowledge Assistant</p>
 
-        <div>
-          <h2>What do you need to know?</h2>
-          <p>
-            Handoff searches approved procedures to find the most relevant
-            answer.
-          </p>
-        </div>
+        <h1>Ask Handoff</h1>
+
+        <p>
+          Ask a question about how something is done and get
+          an answer grounded in your organization's approved
+          procedures.
+        </p>
       </div>
 
-      <form @submit.prevent="submitQuery" class="query-form">
-        <label for="question">Your question</label>
+    </section>
+
+
+    <!-- =========================================
+         Question Card
+         ========================================= -->
+    <section class="question-card">
+
+      <div class="question-heading">
+
+        <div class="assistant-icon">
+          H
+        </div>
+
+        <div>
+          <h2>
+            What do you need to know?
+          </h2>
+
+          <p>
+            Ask about a process, task, or procedure.
+          </p>
+        </div>
+
+      </div>
+
+
+      <form @submit.prevent="askHandoff">
+
+        <label for="question">
+          Your question
+        </label>
 
         <textarea
           id="question"
           v-model="question"
-          placeholder="For example: What should I do if a customer does not have a receipt?"
           rows="5"
-          required
+          placeholder="For example: What should I do when closing the store?"
+          :disabled="isLoading"
         ></textarea>
 
-        <div class="form-footer">
-          <span class="helper-text">
-            Answers are based on approved procedures.
-          </span>
 
-          <button type="submit" :disabled="loading">
-            {{ loading ? 'Searching...' : 'Ask Handoff' }}
+        <div class="question-actions">
+
+          <button
+            type="button"
+            class="example-button"
+            @click="useExample"
+            :disabled="isLoading"
+          >
+            Use Example
           </button>
+
+          <div class="primary-actions">
+
+            <button
+              v-if="question"
+              type="button"
+              class="clear-button"
+              @click="clearQuestion"
+              :disabled="isLoading"
+            >
+              Clear
+            </button>
+
+            <button
+              type="submit"
+              class="ask-button"
+              :disabled="!question.trim() || isLoading"
+            >
+              <span v-if="isLoading">
+                Thinking...
+              </span>
+
+              <span v-else>
+                Ask Handoff
+              </span>
+            </button>
+
+          </div>
+
         </div>
+
       </form>
+
     </section>
 
-    <!-- Query result -->
-    <section v-if="response" class="response-section">
-      <!-- Answered response -->
-      <div v-if="response.status === 'answered'" class="answer-card">
-        <div class="response-heading">
-          <span class="response-badge answered">Answered</span>
-          <h2>Here's what you need to know</h2>
+
+    <!-- =========================================
+         Answered State
+         ========================================= -->
+    <section
+      v-if="hasAsked && responseState === 'answered'"
+      class="response-card answered-card"
+    >
+
+      <div class="response-header">
+
+        <div class="response-icon">
+          ✓
         </div>
 
-        <p class="answer-text">
-          {{ response.answer }}
-        </p>
+        <div>
+          <p class="response-label">
+            Handoff Answer
+          </p>
 
-        <!-- Source information -->
-        <div class="source">
-          <div class="source-heading">
-            <span>Source Procedure</span>
-          </div>
-
-          <div class="source-details">
-            <div>
-              <span>Procedure</span>
-              <strong>{{ response.source_procedure }}</strong>
-            </div>
-
-            <div>
-              <span>Version</span>
-              <strong>{{ response.version }}</strong>
-            </div>
-
-            <div>
-              <span>Last Confirmed</span>
-              <strong>{{ response.last_confirmed }}</strong>
-            </div>
-          </div>
+          <h2>
+            Here's what I found
+          </h2>
         </div>
+
       </div>
 
-      <!-- Documentation gap response -->
-      <div
-        v-else-if="response.status === 'not_documented'"
-        class="not-documented-card"
-      >
-        <div class="response-heading">
-          <span class="response-badge not-documented">
-            Not Documented
-          </span>
 
-          <h2>We couldn't find an approved answer</h2>
+      <div class="answer-content">
+        <p>
+          {{ answer }}
+        </p>
+      </div>
+
+
+      <!-- =========================================
+           Source Procedure
+           ========================================= -->
+      <div class="source-section">
+
+        <span class="source-label">
+          Based on approved procedure
+        </span>
+
+        <div class="source-card">
+
+          <div class="source-icon">
+            ✓
+          </div>
+
+          <div>
+            <strong>
+              {{ sourceProcedure }}
+            </strong>
+
+            <p>
+              This procedure has been reviewed and approved
+              by your organization's Owner.
+            </p>
+          </div>
+
         </div>
 
-        <p class="answer-text">
-          {{ response.message }}
+      </div>
+
+
+      <div class="grounding-note">
+
+        <span>i</span>
+
+        <p>
+          Handoff answers questions using approved organizational
+          knowledge rather than guessing when information is missing.
         </p>
 
-        <div class="gap-notice">
-          <strong>Documentation gap recorded</strong>
+      </div>
+
+    </section>
+
+
+    <!-- =========================================
+         Not Documented State
+         ========================================= -->
+    <section
+      v-if="hasAsked && responseState === 'not_documented'"
+      class="response-card gap-card"
+    >
+
+      <div class="response-header">
+
+        <div class="gap-icon">
+          !
+        </div>
+
+        <div>
+          <p class="response-label">
+            Information Not Documented
+          </p>
+
+          <h2>
+            Handoff couldn't confidently answer that.
+          </h2>
+        </div>
+
+      </div>
+
+
+      <div class="gap-content">
+
+        <p>
+          {{ gapMessage }}
+        </p>
+
+        <p>
+          Instead of guessing, Handoff has identified this as
+          a potential documentation gap for the Owner to review.
+        </p>
+
+      </div>
+
+
+      <div class="gap-status">
+
+        <div class="gap-status-icon">
+          ✓
+        </div>
+
+        <div>
+          <strong>
+            Documentation gap identified
+          </strong>
+
           <p>
-            Your question has been logged so the owner can review whether this
-            procedure should be added to the documentation.
+            The completed application will record this question
+            through the documentation gap service.
           </p>
         </div>
+
       </div>
+
     </section>
+
+
+    <!-- =========================================
+         How Ask Handoff Works
+         ========================================= -->
+    <section class="how-it-works">
+
+      <div class="section-heading">
+
+        <p class="eyebrow">
+          Knowledge Grounding
+        </p>
+
+        <h2>
+          How Handoff works
+        </h2>
+
+      </div>
+
+
+      <div class="process-grid">
+
+        <article class="process-card">
+
+          <span class="process-number">
+            1
+          </span>
+
+          <h3>
+            Ask
+          </h3>
+
+          <p>
+            Ask Handoff a question about a workplace process
+            or task.
+          </p>
+
+        </article>
+
+
+        <article class="process-card">
+
+          <span class="process-number">
+            2
+          </span>
+
+          <h3>
+            Ground
+          </h3>
+
+          <p>
+            Handoff searches approved organizational procedures
+            for relevant knowledge.
+          </p>
+
+        </article>
+
+
+        <article class="process-card">
+
+          <span class="process-number">
+            3
+          </span>
+
+          <h3>
+            Answer or Abstain
+          </h3>
+
+          <p>
+            Handoff provides a grounded answer or identifies
+            a documentation gap when the information is not
+            sufficiently documented.
+          </p>
+
+        </article>
+
+      </div>
+
+    </section>
+
+
+    <!-- =========================================
+         Prototype Notice
+         ========================================= -->
+    <section class="prototype-note">
+
+      <strong>
+        Prototype note
+      </strong>
+
+      <p>
+        The response shown here is currently simulated for
+        frontend demonstration. The completed application will
+        connect this interface to the Handoff API using
+        POST /api/query.
+      </p>
+
+    </section>
+
   </main>
 </template>
 
-<script setup>
-import { ref } from 'vue'
-
-const question = ref('')
-const response = ref(null)
-const loading = ref(false)
-
-// Temporary query responses used while the FastAPI endpoint is being developed.
-// These will later be replaced with a request to POST /api/query.
-const mockAnsweredResponse = {
-  status: 'answered',
-  answer:
-    'Ask the customer for the receipt and verify that the purchase is eligible for return.',
-  source_procedure: 'Customer Returns',
-  procedure_id: 1,
-  version: 1,
-  last_confirmed: 'August 30, 2026'
-}
-
-const mockNotDocumentedResponse = {
-  status: 'not_documented',
-  answer: null,
-  source_procedure: null,
-  procedure_id: null,
-  version: null,
-  last_confirmed: null,
-  message: 'This procedure is not currently documented.'
-}
-
-// Temporary query handler.
-// This will later send the question to POST /api/query.
-function submitQuery() {
-  loading.value = true
-  response.value = null
-
-  setTimeout(() => {
-    // Use the question to demonstrate both possible API responses.
-    if (question.value.toLowerCase().includes('receipt')) {
-      response.value = mockAnsweredResponse
-    } else {
-      response.value = mockNotDocumentedResponse
-    }
-
-    loading.value = false
-  }, 500)
-}
-</script>
-
 <style scoped>
-.query {
-  width: min(900px, calc(100% - 40px));
-  margin: 0 auto;
-  padding: 55px 0 70px;
+/* =========================================
+   Page Layout
+   ========================================= */
+
+.query-page {
+  min-height: calc(100vh - 72px);
+  padding: 42px 24px 70px;
+  background: #f8f6f2;
 }
 
 .page-header {
-  margin-bottom: 35px;
+  max-width: 1000px;
+  margin: 0 auto 24px;
 }
 
 .eyebrow {
   margin: 0 0 8px;
-  color: #b65f32;
-  font-size: 13px;
+  color: #d26f3d;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 1.3px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .page-header h1 {
-  margin: 0 0 10px;
-  color: #263238;
-  font-size: 40px;
+  margin: 0;
+  color: #173c35;
+  font-size: 34px;
+  line-height: 1.1;
 }
 
-.page-header p {
-  margin: 0;
-  color: #68747a;
-  font-size: 17px;
+.page-header p:last-child {
+  max-width: 720px;
+  margin: 10px 0 0;
+  color: #65756f;
+  font-size: 15px;
   line-height: 1.6;
 }
 
-/* Main employee question card */
-.query-card {
-  padding: 30px;
-  background: #ffffff;
-  border: 1px solid #e4ddd7;
+
+/* =========================================
+   Question Card
+   ========================================= */
+
+.question-card {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 28px;
+  border: 1px solid #e2ddd5;
   border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(60, 45, 35, 0.06);
+  background: white;
+  box-shadow: 0 4px 16px rgba(31, 45, 40, 0.05);
 }
 
-.card-heading {
+.question-heading {
   display: flex;
-  align-items: flex-start;
-  gap: 15px;
-  margin-bottom: 25px;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
 }
 
-.question-icon {
+.assistant-icon {
+  width: 46px;
+  height: 46px;
   display: grid;
   place-items: center;
-  flex-shrink: 0;
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background: #f3e3d8;
-  color: #914923;
+  border-radius: 12px;
+  background: #275b4f;
+  color: white;
   font-size: 20px;
   font-weight: 800;
 }
 
-.card-heading h2 {
-  margin: 0 0 5px;
-  color: #263238;
-  font-size: 21px;
-}
-
-.card-heading p {
+.question-heading h2 {
   margin: 0;
-  color: #68747a;
-  font-size: 14px;
-  line-height: 1.5;
+  color: #173c35;
+  font-size: 20px;
 }
 
-/* Question form */
-.query-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.question-heading p {
+  margin: 4px 0 0;
+  color: #75817c;
+  font-size: 13px;
 }
 
-.query-form label {
-  color: #39484e;
-  font-size: 14px;
-  font-weight: 600;
+.question-card label {
+  display: block;
+  margin-bottom: 8px;
+  color: #28473f;
+  font-size: 13px;
+  font-weight: 700;
 }
 
-textarea {
+.question-card textarea {
   width: 100%;
-  padding: 14px;
-  color: #263238;
-  background: #ffffff;
-  border: 1px solid #d8d0ca;
-  border-radius: 8px;
-  font-size: 16px;
-  line-height: 1.5;
+  box-sizing: border-box;
   resize: vertical;
+  border: 1px solid #dcd5cc;
+  border-radius: 9px;
+  padding: 13px;
+  background: #fffdfa;
+  color: #183d36;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.question-card textarea::placeholder {
+  color: #a09d96;
+}
+
+.question-card textarea:focus {
   outline: none;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+  border-color: #7da99b;
+  box-shadow: 0 0 0 3px rgba(39, 91, 79, 0.08);
 }
 
-textarea:focus {
-  border-color: #b65f32;
-  box-shadow: 0 0 0 3px #f3e3d8;
+.question-card textarea:disabled {
+  opacity: 0.7;
 }
 
-textarea::placeholder {
-  color: #9aa3a7;
-}
 
-.form-footer {
+/* =========================================
+   Question Actions
+   ========================================= */
+
+.question-actions {
+  margin-top: 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 15px;
-  margin-top: 5px;
+  gap: 12px;
 }
 
-.helper-text {
-  color: #68747a;
-  font-size: 13px;
-}
-
-/* Query response area */
-.response-section {
-  margin-top: 30px;
-}
-
-.answer-card,
-.not-documented-card {
-  padding: 30px;
-  background: #ffffff;
-  border: 1px solid #e4ddd7;
-  border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(60, 45, 35, 0.06);
-}
-
-.response-heading {
+.primary-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
+  gap: 10px;
 }
 
-.response-heading h2 {
-  margin: 0;
-  color: #263238;
-  font-size: 21px;
-}
-
-/* Response status badges */
-.response-badge {
-  padding: 5px 10px;
-  border-radius: 20px;
+.example-button,
+.clear-button,
+.ask-button {
+  min-height: 40px;
+  padding: 0 15px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 700;
-  white-space: nowrap;
+  cursor: pointer;
 }
 
-.response-badge.answered {
-  background: #e7f1eb;
-  color: #35634a;
+.example-button,
+.clear-button {
+  border: 1px solid #d8d0c7;
+  background: white;
+  color: #496058;
 }
 
-.response-badge.not-documented {
-  background: #f3e3d8;
-  color: #914923;
+.example-button:hover,
+.clear-button:hover {
+  background: #f7f3ed;
 }
 
-.answer-text {
-  margin: 0;
-  color: #39484e;
-  font-size: 17px;
-  line-height: 1.7;
+.ask-button {
+  border: 1px solid #275b4f;
+  background: #275b4f;
+  color: white;
 }
 
-/* Source procedure information */
-.source {
-  margin-top: 28px;
-  padding-top: 22px;
-  border-top: 1px solid #e4ddd7;
+.ask-button:hover {
+  background: #204d43;
 }
 
-.source-heading {
-  margin-bottom: 15px;
-  color: #68747a;
-  font-size: 13px;
+.ask-button:disabled,
+.example-button:disabled,
+.clear-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+/* =========================================
+   Response Cards
+   ========================================= */
+
+.response-card {
+  max-width: 1000px;
+  margin: 20px auto 0;
+  padding: 26px;
+  border: 1px solid #e2ddd5;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 4px 16px rgba(31, 45, 40, 0.05);
+}
+
+.answered-card {
+  border-color: #c9ddd5;
+}
+
+.gap-card {
+  border-color: #e2d5c9;
+}
+
+.response-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.response-icon,
+.gap-icon {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.response-icon {
+  background: #dcebe5;
+  color: #275b4f;
+}
+
+.gap-icon {
+  background: #f5e4d9;
+  color: #a45b38;
+}
+
+.response-label {
+  margin: 0 0 4px;
+  color: #d26f3d;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.source-details {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1.5fr;
-  gap: 20px;
+.response-header h2 {
+  margin: 0;
+  color: #173c35;
+  font-size: 21px;
 }
 
-.source-details div {
+
+/* =========================================
+   Answer
+   ========================================= */
+
+.answer-content {
+  margin: 20px 0;
+  padding: 20px;
+  border-radius: 10px;
+  background: #f7faf8;
+}
+
+.answer-content p {
+  margin: 0;
+  color: #29483f;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+
+/* =========================================
+   Source
+   ========================================= */
+
+.source-section {
+  margin-top: 20px;
+}
+
+.source-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #75817c;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.source-card {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dce5e0;
+  border-radius: 9px;
+  background: #fbfcfa;
 }
 
-.source-details span {
-  color: #68747a;
+.source-icon {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: #275b4f;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.source-card strong {
+  display: block;
+  color: #275b4f;
+  font-size: 13px;
+}
+
+.source-card p {
+  margin: 3px 0 0;
+  color: #75817c;
   font-size: 12px;
 }
 
-.source-details strong {
-  color: #263238;
-  font-size: 14px;
+
+/* =========================================
+   Grounding Note
+   ========================================= */
+
+.grounding-note {
+  margin-top: 18px;
+  padding: 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border-radius: 8px;
+  background: #f5f1eb;
 }
 
-/* Documentation gap notification */
-.gap-notice {
-  margin-top: 25px;
-  padding: 18px 20px;
-  background: #f3e3d8;
-  border-radius: 10px;
+.grounding-note span {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e3ddd3;
+  color: #6d6961;
+  font-size: 11px;
+  font-weight: 700;
 }
 
-.gap-notice strong {
-  color: #914923;
-  font-size: 14px;
-}
-
-.gap-notice p {
-  margin: 6px 0 0;
-  color: #80533c;
-  font-size: 14px;
+.grounding-note p {
+  margin: 0;
+  color: #716f69;
+  font-size: 12px;
   line-height: 1.5;
 }
 
-@media (max-width: 700px) {
-  .query {
-    width: min(100% - 30px, 900px);
-    padding: 40px 0 55px;
+
+/* =========================================
+   Documentation Gap
+   ========================================= */
+
+.gap-content {
+  margin: 20px 0;
+  padding: 18px;
+  border-radius: 9px;
+  background: #fbf5ef;
+}
+
+.gap-content p {
+  margin: 0;
+  color: #5e554e;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.gap-content p + p {
+  margin-top: 10px;
+}
+
+.gap-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #e4ddd4;
+  border-radius: 9px;
+  background: #fffdfa;
+}
+
+.gap-status-icon {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: #f0e6dc;
+  color: #9c5d3e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gap-status strong {
+  display: block;
+  color: #6b5548;
+  font-size: 13px;
+}
+
+.gap-status p {
+  margin: 3px 0 0;
+  color: #80766e;
+  font-size: 12px;
+}
+
+
+/* =========================================
+   How It Works
+   ========================================= */
+
+.how-it-works {
+  max-width: 1000px;
+  margin: 32px auto 0;
+}
+
+.section-heading {
+  margin-bottom: 14px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  color: #173c35;
+  font-size: 22px;
+}
+
+.section-heading .eyebrow {
+  margin-bottom: 5px;
+}
+
+.process-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.process-card {
+  padding: 20px;
+  border: 1px solid #e2ddd5;
+  border-radius: 10px;
+  background: white;
+}
+
+.process-number {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #275b4f;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.process-card h3 {
+  margin: 14px 0 6px;
+  color: #173c35;
+  font-size: 16px;
+}
+
+.process-card p {
+  margin: 0;
+  color: #707d78;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+
+/* =========================================
+   Prototype Notice
+   ========================================= */
+
+.prototype-note {
+  max-width: 1000px;
+  margin: 24px auto 0;
+  padding: 16px;
+  border: 1px dashed #d8d0c6;
+  border-radius: 9px;
+  background: #fbf9f5;
+}
+
+.prototype-note strong {
+  color: #6b665e;
+  font-size: 12px;
+}
+
+.prototype-note p {
+  margin: 5px 0 0;
+  color: #88827a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+
+/* =========================================
+   Responsive Layout
+   ========================================= */
+
+@media (max-width: 760px) {
+  .query-page {
+    padding: 28px 16px 50px;
   }
 
-  .query-card,
-  .answer-card,
-  .not-documented-card {
-    padding: 22px;
+  .page-header h1 {
+    font-size: 29px;
   }
 
-  .form-footer {
-    align-items: stretch;
+  .question-card,
+  .response-card {
+    padding: 20px;
+  }
+
+  .process-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .question-actions {
     flex-direction: column;
+    align-items: stretch;
   }
 
-  .form-footer button {
+  .primary-actions {
     width: 100%;
   }
 
-  .source-details {
-    grid-template-columns: 1fr;
-    gap: 15px;
+  .example-button,
+  .clear-button,
+  .ask-button {
+    flex: 1;
+  }
+
+  .response-header h2 {
+    font-size: 18px;
   }
 }
-</style>

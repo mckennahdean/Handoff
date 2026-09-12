@@ -1,89 +1,31 @@
-<template>
-  <main class="procedures">
-    <!-- Page heading -->
-    <section class="page-header">
-      <div>
-        <p class="eyebrow">Owner Workspace</p>
-        <h1>Procedures</h1>
-        <p>
-          View documented procedures and review their current status.
-        </p>
-      </div>
-
-      <!-- Future procedure creation action -->
-      <button class="add-button" type="button">
-        + Add Procedure
-      </button>
-    </section>
-
-    <!-- Procedure summary -->
-    <section class="summary">
-      <div class="summary-item">
-        <span class="summary-label">Total Procedures</span>
-        <strong>{{ procedures.length }}</strong>
-      </div>
-
-      <div class="summary-item">
-        <span class="summary-label">Approved</span>
-        <strong>{{ approvedCount }}</strong>
-      </div>
-
-      <div class="summary-item">
-        <span class="summary-label">Pending Review</span>
-        <strong>{{ pendingCount }}</strong>
-      </div>
-    </section>
-
-    <!-- Procedure list -->
-    <section class="procedure-list">
-      <article
-        v-for="procedure in procedures"
-        :key="procedure.id"
-        class="procedure-card"
-      >
-        <div class="procedure-info">
-          <div class="title-row">
-            <h2>{{ procedure.title }}</h2>
-
-            <span
-              class="status"
-              :class="procedure.status.toLowerCase()"
-            >
-              {{ procedure.status }}
-            </span>
-          </div>
-
-          <p>
-            Last confirmed: {{ procedure.lastConfirmed }}
-          </p>
-        </div>
-
-        <!-- Opens the procedure review screen -->
-        <RouterLink
-          :to="{
-            path: '/procedure-review',
-            query: { id: procedure.id }
-          }"
-          class="review-button"
-        >
-          Review
-        </RouterLink>
-      </article>
-    </section>
-
-    <!-- Documentation gap link -->
-    <div class="bottom-action">
-      <RouterLink to="/gaps" class="secondary-link">
-        View Documentation Gaps →
-      </RouterLink>
-    </div>
-  </main>
-</template>
-
 <script setup>
-// Temporary data used while the FastAPI endpoint is being developed.
-// This will later be replaced with data from GET /api/procedures.
-const procedures = [
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+/*
+ * Get the current user's role from the frontend prototype session.
+ */
+const role = localStorage.getItem('userRole')
+
+/*
+ * Determine whether the current user is an Owner.
+ */
+const isOwner = computed(() => {
+  return role === 'owner'
+})
+
+/*
+ * Temporary prototype data.
+ *
+ * These represent procedures that would eventually come from:
+ * GET /api/procedures
+ *
+ * Procedures created through the Capture -> Review -> Approval
+ * workflow are added to this list from localStorage below.
+ */
+const procedures = ref([
   {
     id: 1,
     title: 'Customer Returns',
@@ -102,103 +44,439 @@ const procedures = [
     status: 'Pending',
     lastConfirmed: 'August 25, 2026'
   }
-]
+])
 
-// Calculate procedure totals for the summary section.
-const approvedCount = procedures.filter(
-  (procedure) => procedure.status === 'Approved'
-).length
+/*
+ * Load procedures that have passed the Owner approval gate.
+ *
+ * ProcedureReviewView.vue stores approved procedures in:
+ * localStorage.handoffProcedures
+ *
+ * This allows the frontend prototype to demonstrate the complete
+ * workflow without requiring the FastAPI backend yet.
+ */
+const storedProcedures = JSON.parse(
+  localStorage.getItem('handoffProcedures') || '[]'
+)
 
-const pendingCount = procedures.filter(
-  (procedure) => procedure.status === 'Pending'
-).length
+/*
+ * Add stored approved procedures to the prototype list.
+ *
+ * The title check prevents the same procedure from appearing twice
+ * if the page is refreshed.
+ */
+storedProcedures.forEach((storedProcedure) => {
+  const alreadyExists = procedures.value.some(
+    (procedure) => procedure.title === storedProcedure.title
+  )
+
+  if (!alreadyExists) {
+    procedures.value.push(storedProcedure)
+  }
+})
+
+/*
+ * Employees should only see approved procedures.
+ *
+ * Owners can see all procedures, including procedures that are
+ * still pending review.
+ */
+const visibleProcedures = computed(() => {
+  if (isOwner.value) {
+    return procedures.value
+  }
+
+  return procedures.value.filter(
+    (procedure) => procedure.status === 'Approved'
+  )
+})
+
+/*
+ * Calculate procedure totals for the Owner summary.
+ */
+const approvedCount = computed(() => {
+  return procedures.value.filter(
+    (procedure) => procedure.status === 'Approved'
+  ).length
+})
+
+const pendingCount = computed(() => {
+  return procedures.value.filter(
+    (procedure) => procedure.status === 'Pending'
+  ).length
+})
+
+/*
+ * Send the Owner to the Capture Procedure page.
+ */
+const addProcedure = () => {
+  router.push('/capture-procedure')
+}
 </script>
 
+<template>
+  <main class="procedures">
+
+    <!-- =========================================
+         Owner Page Header
+         ========================================= -->
+    <section
+      v-if="isOwner"
+      class="page-header"
+    >
+      <div>
+        <p class="eyebrow">Owner Workspace</p>
+
+        <h1>Procedures</h1>
+
+        <p>
+          View documented procedures and review their current status.
+        </p>
+      </div>
+
+      <button
+        class="add-button"
+        type="button"
+        @click="addProcedure"
+      >
+        + Add Procedure
+      </button>
+    </section>
+
+
+    <!-- =========================================
+         Employee Page Header
+         ========================================= -->
+    <section
+      v-else
+      class="page-header employee-header"
+    >
+      <div>
+        <p class="eyebrow">Employee Knowledge Base</p>
+
+        <h1>Approved Procedures</h1>
+
+        <p>
+          Browse the procedures your organization has reviewed
+          and approved for employees.
+        </p>
+      </div>
+    </section>
+
+
+    <!-- =========================================
+         Owner Procedure Summary
+         ========================================= -->
+    <section
+      v-if="isOwner"
+      class="summary"
+    >
+      <div class="summary-item">
+        <span class="summary-label">
+          Total Procedures
+        </span>
+
+        <strong>
+          {{ procedures.length }}
+        </strong>
+      </div>
+
+      <div class="summary-item">
+        <span class="summary-label">
+          Approved
+        </span>
+
+        <strong>
+          {{ approvedCount }}
+        </strong>
+      </div>
+
+      <div class="summary-item">
+        <span class="summary-label">
+          Pending Review
+        </span>
+
+        <strong>
+          {{ pendingCount }}
+        </strong>
+      </div>
+    </section>
+
+
+    <!-- =========================================
+         Employee Procedure Summary
+         ========================================= -->
+    <section
+      v-else
+      class="employee-summary"
+    >
+      <div class="employee-summary-item">
+        <span class="summary-label">
+          Available Procedures
+        </span>
+
+        <strong>
+          {{ visibleProcedures.length }}
+        </strong>
+
+        <p>
+          Approved and available for your use
+        </p>
+      </div>
+    </section>
+
+
+    <!-- =========================================
+         Procedure List
+         ========================================= -->
+    <section class="procedure-list">
+
+      <article
+        v-for="procedure in visibleProcedures"
+        :key="procedure.id"
+        class="procedure-card"
+      >
+
+        <div class="procedure-info">
+
+          <div class="title-row">
+
+            <h2>
+              {{ procedure.title }}
+            </h2>
+
+            <!-- Owner sees the actual procedure status -->
+            <span
+              v-if="isOwner"
+              class="status"
+              :class="procedure.status.toLowerCase()"
+            >
+              {{ procedure.status }}
+            </span>
+
+            <!-- Employees only see approved procedures -->
+            <span
+              v-else
+              class="status approved"
+            >
+              Approved
+            </span>
+
+          </div>
+
+          <p>
+            Last confirmed: {{ procedure.lastConfirmed }}
+          </p>
+
+        </div>
+
+
+        <!-- Owner-only review action -->
+        <RouterLink
+          v-if="isOwner"
+          :to="{
+            path: '/procedure-review',
+            query: { id: procedure.id }
+          }"
+          class="review-button"
+        >
+          Review
+        </RouterLink>
+
+      </article>
+
+    </section>
+
+
+    <!-- =========================================
+         Employee Information
+         ========================================= -->
+    <section
+      v-if="!isOwner"
+      class="employee-note"
+    >
+      <div class="note-icon">
+        i
+      </div>
+
+      <div>
+        <strong>
+          Approved knowledge
+        </strong>
+
+        <p>
+          These procedures have been reviewed and approved
+          by your organization's owner. If you cannot find
+          the information you need, ask Handoff a question.
+        </p>
+      </div>
+    </section>
+
+
+    <!-- =========================================
+         Prototype Notice
+         ========================================= -->
+    <section class="prototype-note">
+      <strong>Prototype note</strong>
+
+      <p>
+        Procedure data is currently stored locally for the
+        frontend prototype. The completed application will
+        retrieve approved procedures from the Handoff API
+        and PostgreSQL knowledge base.
+      </p>
+    </section>
+
+  </main>
+</template>
+
 <style scoped>
+/* =========================================
+   Page Layout
+   ========================================= */
+
 .procedures {
-  width: min(1100px, calc(100% - 40px));
-  margin: 0 auto;
-  padding: 55px 0 70px;
+  min-height: calc(100vh - 72px);
+  padding: 42px 24px 70px;
+  background: #f8f6f2;
 }
 
 .page-header {
+  max-width: 1120px;
+  margin: 0 auto 24px;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 30px;
-  margin-bottom: 35px;
+  gap: 24px;
 }
 
 .eyebrow {
   margin: 0 0 8px;
-  color: #b65f32;
-  font-size: 13px;
+  color: #d26f3d;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 1.3px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .page-header h1 {
-  margin: 0 0 10px;
-  color: #263238;
-  font-size: 40px;
+  margin: 0;
+  color: #173c35;
+  font-size: 34px;
+  line-height: 1.1;
 }
 
-.page-header p {
-  margin: 0;
-  color: #68747a;
-  font-size: 17px;
-  line-height: 1.5;
+.page-header p:last-child {
+  margin: 10px 0 0;
+  color: #65756f;
+  font-size: 15px;
 }
 
 .add-button {
-  white-space: nowrap;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid #275b4f;
+  border-radius: 8px;
+  background: #275b4f;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-/* Procedure statistics */
+.add-button:hover {
+  background: #204d43;
+}
+
+
+/* =========================================
+   Summary
+   ========================================= */
+
 .summary {
+  max-width: 1120px;
+  margin: 0 auto 24px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-  margin-bottom: 28px;
+  gap: 14px;
 }
 
 .summary-item {
-  padding: 22px 24px;
-  background: #ffffff;
-  border: 1px solid #e4ddd7;
-  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e2ddd5;
+  border-radius: 10px;
+  background: white;
 }
 
 .summary-label {
   display: block;
-  margin-bottom: 8px;
-  color: #68747a;
-  font-size: 14px;
+  color: #75817c;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .summary-item strong {
-  color: #263238;
+  display: block;
+  margin-top: 6px;
+  color: #173c35;
   font-size: 28px;
 }
 
-/* Individual procedure cards */
+
+/* =========================================
+   Employee Summary
+   ========================================= */
+
+.employee-summary {
+  max-width: 1120px;
+  margin: 0 auto 24px;
+}
+
+.employee-summary-item {
+  padding: 20px;
+  border: 1px solid #e2ddd5;
+  border-radius: 10px;
+  background: white;
+}
+
+.employee-summary-item strong {
+  display: block;
+  margin-top: 6px;
+  color: #173c35;
+  font-size: 28px;
+}
+
+.employee-summary-item p {
+  margin: 5px 0 0;
+  color: #75817c;
+  font-size: 13px;
+}
+
+
+/* =========================================
+   Procedure List
+   ========================================= */
+
 .procedure-list {
+  max-width: 1120px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
 }
 
 .procedure-card {
+  padding: 20px 22px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 25px;
-  padding: 24px;
-  background: #ffffff;
-  border: 1px solid #e4ddd7;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(60, 45, 35, 0.04);
+  gap: 20px;
+  border: 1px solid #e2ddd5;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 3px 12px rgba(31, 45, 40, 0.04);
 }
 
 .procedure-info {
@@ -208,82 +486,148 @@ const pendingCount = procedures.filter(
 .title-row {
   display: flex;
   align-items: center;
-  gap: 12px;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
-.procedure-card h2 {
+.title-row h2 {
   margin: 0;
-  color: #263238;
-  font-size: 20px;
+  color: #173c35;
+  font-size: 18px;
 }
 
-.procedure-card p {
-  margin: 8px 0 0;
-  color: #68747a;
-  font-size: 14px;
+.procedure-info > p {
+  margin: 7px 0 0;
+  color: #7a8580;
+  font-size: 13px;
 }
 
-/* Procedure status indicators */
+
+/* =========================================
+   Status Badges
+   ========================================= */
+
 .status {
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
   font-weight: 700;
 }
 
 .status.approved {
-  background: #e7f1eb;
-  color: #35634a;
+  background: #dcebe5;
+  color: #275b4f;
 }
 
 .status.pending {
-  background: #f3e3d8;
-  color: #914923;
+  background: #f5e7d9;
+  color: #9a5d3b;
 }
 
-/* Procedure review action */
+.status.needs {
+  background: #f3dddd;
+  color: #a04e4e;
+}
+
+
+/* =========================================
+   Review Button
+   ========================================= */
+
 .review-button {
-  flex-shrink: 0;
-  padding: 10px 18px;
-  border-radius: 8px;
-  background: #b65f32;
-  color: #ffffff;
+  flex: 0 0 auto;
+  padding: 9px 14px;
+  border: 1px solid #d7d0c7;
+  border-radius: 7px;
+  color: #275b4f;
+  background: white;
+  font-size: 12px;
+  font-weight: 700;
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 600;
-  transition:
-    background-color 0.2s ease,
-    transform 0.15s ease,
-    box-shadow 0.2s ease;
 }
 
 .review-button:hover {
-  background: #914923;
-  color: #ffffff;
-  box-shadow: 0 3px 8px rgba(80, 45, 30, 0.18);
-  transform: translateY(-1px);
+  background: #f7f3ed;
 }
 
-/* Link to the documentation gaps page */
-.bottom-action {
-  margin-top: 28px;
+
+/* =========================================
+   Employee Information
+   ========================================= */
+
+.employee-note {
+  max-width: 1120px;
+  margin: 24px auto 0;
+  padding: 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid #ddd8d0;
+  border-radius: 10px;
+  background: #f3efe9;
 }
 
-.secondary-link {
-  color: #b65f32;
-  font-weight: 600;
-  text-decoration: none;
+.note-icon {
+  flex: 0 0 auto;
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #275b4f;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.secondary-link:hover {
-  color: #914923;
+.employee-note strong {
+  color: #31544b;
+  font-size: 13px;
 }
 
-@media (max-width: 700px) {
+.employee-note p {
+  margin: 4px 0 0;
+  color: #6e7974;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+
+/* =========================================
+   Prototype Notice
+   ========================================= */
+
+.prototype-note {
+  max-width: 1120px;
+  margin: 24px auto 0;
+  padding: 16px;
+  border: 1px dashed #d8d0c6;
+  border-radius: 9px;
+  background: #fbf9f5;
+}
+
+.prototype-note strong {
+  color: #6b665e;
+  font-size: 12px;
+}
+
+.prototype-note p {
+  margin: 5px 0 0;
+  color: #88827a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+
+/* =========================================
+   Responsive Layout
+   ========================================= */
+
+@media (max-width: 760px) {
   .procedures {
-    width: min(100% - 30px, 1100px);
-    padding: 40px 0 55px;
+    padding: 28px 16px 50px;
   }
 
   .page-header {
@@ -297,12 +641,21 @@ const pendingCount = procedures.filter(
 
   .procedure-card {
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .page-header h1 {
+    font-size: 28px;
+  }
+
+  .procedure-card {
     flex-direction: column;
   }
 
   .review-button {
     width: 100%;
+    box-sizing: border-box;
     text-align: center;
   }
 }
-</style>

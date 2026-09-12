@@ -2,69 +2,67 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-// Allows navigation between pages.
+// Allows navigation between the login and sign-up screens.
 const router = useRouter()
 
-// Stores the values entered into the login form.
+// Stores the values entered into the sign-up form.
+const name = ref('')
+const business = ref('')
 const email = ref('')
 const password = ref('')
+const confirmPassword = ref('')
 
-// Controls whether the password is visible.
+// Stores the type of Handoff account being created.
+// Employee is selected by default because Owner access
+// should eventually be controlled by the backend.
+const role = ref('employee')
+
+// Controls whether the password fields are visible.
 const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 // Displays a message after the user takes an action.
 const message = ref('')
 
-// Handles sign-in for the frontend prototype.
-const signIn = () => {
-  // Check whether a prototype account exists.
-  const storedUser = localStorage.getItem('handoffUser')
-
-  if (!storedUser) {
-    message.value =
-      'No account found. Please create an account first.'
-    return
-  }
-
-  // Retrieve the stored account information.
-  const user = JSON.parse(storedUser)
-
-  // Make sure the email matches the account.
-  if (email.value !== user.email) {
-    message.value =
-      'The email address does not match the prototype account.'
-    return
-  }
-
-  // Retrieve the user's role.
-  const role = localStorage.getItem('userRole')
-
-  // Send the user to the appropriate dashboard.
-  if (role === 'owner') {
-    router.push('/owner-dashboard')
-  } else {
-    router.push('/employee-dashboard')
-  }
-}
-
-// Sends the user to the sign-up page.
+// Handles account creation.
 const createAccount = () => {
-  router.push('/signup')
+  // Make sure both password fields match.
+  if (password.value !== confirmPassword.value) {
+    message.value = 'Passwords do not match. Please try again.'
+    return
+  }
+
+  // Store the selected role for the frontend prototype.
+  // This will eventually be replaced by the authenticated
+  // user's role returned from the Handoff backend.
+  localStorage.setItem('userRole', role.value)
+
+  // Store basic user information for the prototype.
+  localStorage.setItem(
+    'handoffUser',
+    JSON.stringify({
+      name: name.value,
+      business: business.value,
+      email: email.value,
+      role: role.value
+    })
+  )
+
+  message.value =
+    'Account created successfully. Backend authentication will be connected later.'
 }
 
-// Handles the forgot-password action.
-// This remains a mock until backend authentication is implemented.
-const forgotPassword = () => {
-  message.value =
-    'Password recovery will be connected to the Handoff backend.'
+// Returns the user to the login screen.
+const goToLogin = () => {
+  router.push('/login')
 }
 </script>
 
 <template>
-  <main class="login-page">
+  <main class="signup-page">
 
-    <!-- Main login card -->
-    <section class="login-card">
+    <!-- Main sign-up card -->
+    <section class="signup-card">
 
       <!-- Left branding panel -->
       <div class="brand-panel">
@@ -92,21 +90,95 @@ const forgotPassword = () => {
         </div>
       </div>
 
-      <!-- Right login panel -->
+      <!-- Right sign-up panel -->
       <div class="form-panel">
         <div class="form-content">
 
           <!-- Heading -->
           <div class="heading-section">
-            <h1>Welcome Back</h1>
+            <h1>Create Your Account</h1>
 
             <p>
-              Sign in to access your Handoff workspace.
+              Get started with Handoff and keep your business
+              knowledge in one place.
             </p>
           </div>
 
-          <!-- Login form -->
-          <form @submit.prevent="signIn">
+          <!-- Sign-up form -->
+          <form @submit.prevent="createAccount">
+
+            <!-- Full name -->
+            <div class="form-group">
+              <label for="name">Full Name</label>
+
+              <input
+                id="name"
+                v-model="name"
+                type="text"
+                placeholder="Your full name"
+                required
+              />
+            </div>
+
+            <!-- Business or organization -->
+            <div class="form-group">
+              <label for="business">Business or Organization</label>
+
+              <input
+                id="business"
+                v-model="business"
+                type="text"
+                placeholder="Your business or organization"
+                required
+              />
+            </div>
+
+            <!-- Account type -->
+            <div class="form-group">
+              <label>Account Type</label>
+
+              <div class="role-options">
+
+                <!-- Owner option -->
+                <label
+                  class="role-option"
+                  :class="{ selected: role === 'owner' }"
+                >
+                  <input
+                    v-model="role"
+                    type="radio"
+                    value="owner"
+                  />
+
+                  <div class="role-text">
+                    <span class="role-title">Owner</span>
+                    <span class="role-description">
+                      Manage procedures, approvals, and team knowledge
+                    </span>
+                  </div>
+                </label>
+
+                <!-- Employee option -->
+                <label
+                  class="role-option"
+                  :class="{ selected: role === 'employee' }"
+                >
+                  <input
+                    v-model="role"
+                    type="radio"
+                    value="employee"
+                  />
+
+                  <div class="role-text">
+                    <span class="role-title">Employee</span>
+                    <span class="role-description">
+                      Find and use approved business knowledge
+                    </span>
+                  </div>
+                </label>
+
+              </div>
+            </div>
 
             <!-- Email -->
             <div class="form-group">
@@ -123,24 +195,14 @@ const forgotPassword = () => {
 
             <!-- Password -->
             <div class="form-group">
-              <div class="password-label-row">
-                <label for="password">Password</label>
-
-                <button
-                  type="button"
-                  class="forgot-button"
-                  @click="forgotPassword"
-                >
-                  Forgot Password?
-                </button>
-              </div>
+              <label for="password">Password</label>
 
               <div class="password-input">
                 <input
                   id="password"
                   v-model="password"
                   :type="showPassword ? 'text' : 'password'"
-                  placeholder="Enter your password"
+                  placeholder="Create a password"
                   required
                 />
 
@@ -192,26 +254,89 @@ const forgotPassword = () => {
               </div>
             </div>
 
-            <!-- Sign in button -->
+            <!-- Confirm password -->
+            <div class="form-group">
+              <label for="confirm-password">Confirm Password</label>
+
+              <div class="password-input">
+                <input
+                  id="confirm-password"
+                  v-model="confirmPassword"
+                  :type="showConfirmPassword ? 'text' : 'password'"
+                  placeholder="Re-enter your password"
+                  required
+                />
+
+                <!-- Confirm password visibility toggle -->
+                <button
+                  type="button"
+                  class="password-toggle"
+                  :aria-label="
+                    showConfirmPassword
+                      ? 'Hide password'
+                      : 'Show password'
+                  "
+                  @click="showConfirmPassword = !showConfirmPassword"
+                >
+
+                  <!-- Hidden password icon -->
+                  <svg
+                    v-if="!showConfirmPassword"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"
+                    />
+
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="2.5"
+                    />
+                  </svg>
+
+                  <!-- Visible password icon -->
+                  <svg
+                    v-else
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 3l18 18" />
+
+                    <path
+                      d="M10.6 6.2A10.8 10.8 0 0 1 12 6c6.5 0 10 6 10 6a17.4 17.4 0 0 1-3.1 3.8"
+                    />
+
+                    <path
+                      d="M6.1 6.1C3.5 8.1 2 12 2 12s3.5 6 10 6c1.4 0 2.7-.3 3.8-.8"
+                    />
+                  </svg>
+
+                </button>
+              </div>
+            </div>
+
+            <!-- Create account button -->
             <button
               type="submit"
-              class="signin-button"
+              class="create-button"
             >
-              Sign In
+              Create Account
             </button>
 
           </form>
 
-          <!-- Account creation -->
-          <div class="signup-link">
-            <span>Don't have an account?</span>
+          <!-- Return to login -->
+          <div class="login-link">
+            <span>Already have an account?</span>
 
             <button
               type="button"
-              class="signup-link-button"
-              @click="createAccount"
+              class="login-link-button"
+              @click="goToLogin"
             >
-              Create Account
+              Sign In
             </button>
           </div>
 
@@ -238,10 +363,10 @@ const forgotPassword = () => {
 <style scoped>
 
 /* =========================================
-   Overall Login Page
+   Overall Sign-Up Page
    ========================================= */
 
-.login-page {
+.signup-page {
   min-height: 100vh;
   width: 100%;
   display: flex;
@@ -254,10 +379,10 @@ const forgotPassword = () => {
 
 
 /* =========================================
-   Main Login Card
+   Main Sign-Up Card
    ========================================= */
 
-.login-card {
+.signup-card {
   width: 100%;
   max-width: 1050px;
   min-height: 650px;
@@ -368,7 +493,7 @@ const forgotPassword = () => {
    ========================================= */
 
 .heading-section {
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 
 
@@ -394,7 +519,7 @@ const forgotPassword = () => {
    ========================================= */
 
 .form-group {
-  margin-bottom: 22px;
+  margin-bottom: 18px;
 }
 
 
@@ -437,36 +562,74 @@ const forgotPassword = () => {
 
 
 /* =========================================
-   Password Label Row
+   Account Role Selection
    ========================================= */
 
-.password-label-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.role-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 
-.password-label-row label {
-  margin-bottom: 8px;
+.role-option {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  box-sizing: border-box;
+  border: 1px solid #d8d2c8;
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    box-shadow 0.2s;
 }
 
 
-.forgot-button {
-  padding: 0;
-  border: none;
-  background: none;
-  color: #275b4f;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
+.role-option:hover {
+  border-color: #275b4f;
+}
+
+
+.role-option.selected {
+  border-color: #275b4f;
+  background: #f5f9f7;
+  box-shadow:
+    0 0 0 2px rgba(39, 91, 79, 0.08);
+}
+
+
+.role-option input[type='radio'] {
+  width: auto;
+  margin-top: 3px;
+  accent-color: #275b4f;
   cursor: pointer;
 }
 
 
-.forgot-button:hover {
-  color: #d26f3d;
-  text-decoration: underline;
+.role-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+
+.role-title {
+  color: #275b4f;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+
+.role-description {
+  color: #6b6b6b;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 
@@ -523,10 +686,10 @@ const forgotPassword = () => {
 
 
 /* =========================================
-   Sign In Button
+   Create Account Button
    ========================================= */
 
-.signin-button {
+.create-button {
   width: 100%;
   margin-top: 5px;
   padding: 15px;
@@ -545,7 +708,7 @@ const forgotPassword = () => {
 }
 
 
-.signin-button:hover {
+.create-button:hover {
   opacity: 0.92;
   transform: translateY(-1px);
   box-shadow:
@@ -553,16 +716,16 @@ const forgotPassword = () => {
 }
 
 
-.signin-button:active {
+.create-button:active {
   transform: translateY(0);
 }
 
 
 /* =========================================
-   Sign-Up Link
+   Login Link
    ========================================= */
 
-.signup-link {
+.login-link {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -573,7 +736,7 @@ const forgotPassword = () => {
 }
 
 
-.signup-link-button {
+.login-link-button {
   padding: 0;
   border: none;
   background: none;
@@ -585,7 +748,7 @@ const forgotPassword = () => {
 }
 
 
-.signup-link-button:hover {
+.login-link-button:hover {
   text-decoration: underline;
 }
 
@@ -624,7 +787,7 @@ const forgotPassword = () => {
 
 @media (max-width: 850px) {
 
-  .login-card {
+  .signup-card {
     grid-template-columns: 1fr;
     max-width: 600px;
   }
@@ -649,7 +812,6 @@ const forgotPassword = () => {
   .form-panel {
     padding: 50px 45px;
   }
-
 }
 
 
@@ -659,11 +821,11 @@ const forgotPassword = () => {
 
 @media (max-width: 500px) {
 
-  .login-page {
+  .signup-page {
     padding: 15px;
   }
 
-  .login-card {
+  .signup-card {
     border-radius: 14px;
   }
 
@@ -692,16 +854,14 @@ const forgotPassword = () => {
     font-size: 30px;
   }
 
-  .password-label-row {
-    align-items: flex-start;
-    gap: 10px;
+  .role-options {
+    grid-template-columns: 1fr;
   }
 
-  .signup-link {
+  .login-link {
     flex-direction: column;
     gap: 7px;
   }
-
 }
 
 </style>
