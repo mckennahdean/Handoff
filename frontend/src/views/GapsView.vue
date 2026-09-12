@@ -1,151 +1,107 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
-/*
- * Prototype documentation-gap data.
- *
- * The completed application will replace this local data with:
- *
- * GET /api/gaps
- *
- * Each gap represents a question Handoff could not confidently
- * answer using the approved organizational knowledge base.
- */
-const gaps = ref([
-  {
-    id: 1,
-    question: 'How do I request vacation time?',
-    askedBy: 'Employee',
-    date: 'September 10, 2026',
-    status: 'Open',
-    occurrences: 3
-  },
-  {
-    id: 2,
-    question: 'What is the procedure for handling a damaged shipment?',
-    askedBy: 'Employee',
-    date: 'September 9, 2026',
-    status: 'Open',
-    occurrences: 2
-  },
-  {
-    id: 3,
-    question: 'Who should I contact when the register is not working?',
-    askedBy: 'Employee',
-    date: 'September 7, 2026',
-    status: 'Reviewed',
-    occurrences: 1
-  }
-])
-
-/*
- * Tracks the currently selected documentation gap.
- */
+const gaps = ref([])
 const selectedGap = ref(null)
-
-/*
- * Controls the details modal.
- */
 const showDetails = ref(false)
-
-/*
- * Search/filter text.
- */
 const searchQuery = ref('')
+const isLoading = ref(true)
+const errorMessage = ref('')
 
-/*
- * Current status filter.
- */
-const statusFilter = ref('All')
+const formatDate = (dateValue) => {
+  if (!dateValue) {
+    return 'Unknown'
+  }
 
-/*
- * Filter the displayed gaps.
- *
- * Owners can search by question and filter by status.
- */
-const visibleGaps = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase()
+  const date = new Date(dateValue)
 
-  return gaps.value.filter((gap) => {
-    const matchesSearch =
-      !query ||
-      gap.question.toLowerCase().includes(query)
+  if (Number.isNaN(date.getTime())) {
+    return dateValue
+  }
 
-    const matchesStatus =
-      statusFilter.value === 'All' ||
-      gap.status === statusFilter.value
-
-    return matchesSearch && matchesStatus
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   })
+}
+
+const formatSimilarity = (similarity) => {
+  if (
+    similarity === null ||
+    similarity === undefined ||
+    Number.isNaN(Number(similarity))
+  ) {
+    return 'Not available'
+  }
+
+  return `${(Number(similarity) * 100).toFixed(1)}%`
+}
+
+const loadGaps = async () => {
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    const response = await fetch(
+      'http://127.0.0.1:8000/api/gaps'
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(
+        data.detail || 'Unable to load documentation gaps.'
+      )
+    }
+
+    gaps.value = Array.isArray(data)
+      ? data
+      : []
+  } catch (error) {
+    console.error(error)
+
+    errorMessage.value =
+      error.message ||
+      'Handoff could not connect to the documentation gap service.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const visibleGaps = computed(() => {
+  const query = searchQuery.value
+    .trim()
+    .toLowerCase()
+
+  if (!query) {
+    return gaps.value
+  }
+
+  return gaps.value.filter((gap) =>
+    gap.question
+      ?.toLowerCase()
+      .includes(query)
+  )
 })
 
-/*
- * Count currently open documentation gaps.
- */
-const openCount = computed(() => {
-  return gaps.value.filter(
-    (gap) => gap.status === 'Open'
-  ).length
-})
-
-/*
- * Count questions that have been asked more than once.
- *
- * Repeated questions are particularly useful because they can
- * indicate a knowledge area that employees frequently need.
- */
-const repeatedCount = computed(() => {
-  return gaps.value.filter(
-    (gap) => gap.occurrences > 1
-  ).length
-})
-
-/*
- * Open a documentation-gap details view.
- */
 const viewGap = (gap) => {
   selectedGap.value = gap
   showDetails.value = true
 }
 
-/*
- * Close the details modal.
- */
 const closeDetails = () => {
   showDetails.value = false
   selectedGap.value = null
 }
 
-/*
- * Mark a documentation gap as reviewed.
- *
- * This is currently local prototype behavior.
- *
- * Future implementation could connect this action to a backend
- * endpoint for updating the gap status.
- */
-const markReviewed = () => {
-  if (!selectedGap.value) {
-    return
-  }
-
-  const gap = gaps.value.find(
-    (item) => item.id === selectedGap.value.id
-  )
-
-  if (gap) {
-    gap.status = 'Reviewed'
-    selectedGap.value = gap
-  }
-}
-
-/*
- * Clear the search/filter controls.
- */
 const clearFilters = () => {
   searchQuery.value = ''
-  statusFilter.value = 'All'
 }
+
+onMounted(() => {
+  loadGaps()
+})
 </script>
 
 <template>
@@ -169,390 +125,384 @@ const clearFilters = () => {
 
     </section>
 
-
     <!-- =========================================
-         Summary Cards
+         Loading State
          ========================================= -->
-    <section class="summary">
+    <section
+      v-if="isLoading"
+      class="status-message"
+    >
+      <strong>Loading documentation gaps...</strong>
 
-      <div class="summary-card">
-        <span class="summary-label">
-          Open Gaps
-        </span>
-
-        <strong>
-          {{ openCount }}
-        </strong>
-
-        <p>
-          Need Owner attention
-        </p>
-      </div>
-
-
-      <div class="summary-card">
-        <span class="summary-label">
-          Total Questions
-        </span>
-
-        <strong>
-          {{ gaps.length }}
-        </strong>
-
-        <p>
-          Questions identified as gaps
-        </p>
-      </div>
-
-
-      <div class="summary-card">
-        <span class="summary-label">
-          Repeated Questions
-        </span>
-
-        <strong>
-          {{ repeatedCount }}
-        </strong>
-
-        <p>
-          Asked more than once
-        </p>
-      </div>
-
+      <p>
+        Handoff is retrieving unanswered employee questions.
+      </p>
     </section>
 
-
     <!-- =========================================
-         Explanation Banner
+         Error State
          ========================================= -->
-    <section class="info-banner">
-
-      <div class="info-icon">
-        i
+    <section
+      v-else-if="errorMessage"
+      class="error-message"
+    >
+      <div class="error-icon">
+        !
       </div>
 
       <div>
-        <strong>
-          Why documentation gaps matter
-        </strong>
+        <strong>Unable to load documentation gaps</strong>
 
         <p>
-          Handoff is designed to avoid guessing when approved
-          knowledge does not contain enough information to answer
-          a question. These gaps help Owners identify processes
-          that should be documented.
+          {{ errorMessage }}
         </p>
-      </div>
-
-    </section>
-
-
-    <!-- =========================================
-         Filters
-         ========================================= -->
-    <section class="filters">
-
-      <div class="search-wrapper">
-
-        <label for="gap-search">
-          Search questions
-        </label>
-
-        <input
-          id="gap-search"
-          v-model="searchQuery"
-          type="search"
-          placeholder="Search documentation gaps..."
-        />
-
-      </div>
-
-
-      <div class="status-wrapper">
-
-        <label for="status-filter">
-          Status
-        </label>
-
-        <select
-          id="status-filter"
-          v-model="statusFilter"
-        >
-          <option value="All">
-            All
-          </option>
-
-          <option value="Open">
-            Open
-          </option>
-
-          <option value="Reviewed">
-            Reviewed
-          </option>
-        </select>
-
-      </div>
-
-
-      <button
-        type="button"
-        class="clear-filter-button"
-        @click="clearFilters"
-      >
-        Clear Filters
-      </button>
-
-    </section>
-
-
-    <!-- =========================================
-         Gap List
-         ========================================= -->
-    <section class="gap-list">
-
-      <div
-        v-if="visibleGaps.length === 0"
-        class="empty-state"
-      >
-        <div class="empty-icon">
-          ✓
-        </div>
-
-        <h2>
-          No documentation gaps found
-        </h2>
-
-        <p>
-          Try changing your search or status filter.
-        </p>
-      </div>
-
-
-      <article
-        v-for="gap in visibleGaps"
-        :key="gap.id"
-        class="gap-card"
-      >
-
-        <div class="gap-card-main">
-
-          <div class="question-icon">
-            ?
-          </div>
-
-          <div class="gap-content">
-
-            <div class="gap-title-row">
-
-              <h2>
-                {{ gap.question }}
-              </h2>
-
-              <span
-                class="status"
-                :class="gap.status.toLowerCase()"
-              >
-                {{ gap.status }}
-              </span>
-
-            </div>
-
-            <div class="gap-meta">
-
-              <span>
-                Asked {{ gap.date }}
-              </span>
-
-              <span>
-                {{ gap.occurrences }}
-                {{ gap.occurrences === 1 ? 'occurrence' : 'occurrences' }}
-              </span>
-
-            </div>
-
-          </div>
-
-        </div>
-
 
         <button
           type="button"
-          class="view-button"
-          @click="viewGap(gap)"
+          class="retry-button"
+          @click="loadGaps"
         >
-          Review
+          Try Again
         </button>
-
-      </article>
-
+      </div>
     </section>
 
+    <template v-else>
 
-    <!-- =========================================
-         Gap Details Modal
-         ========================================= -->
-    <div
-      v-if="showDetails && selectedGap"
-      class="modal-backdrop"
-      @click.self="closeDetails"
-    >
+      <!-- =========================================
+           Summary Cards
+           ========================================= -->
+      <section class="summary">
 
-      <section
-        class="gap-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="gap-modal-title"
-      >
-
-        <div class="modal-header">
-
-          <div>
-            <p class="eyebrow">
-              Documentation Gap
-            </p>
-
-            <h2 id="gap-modal-title">
-              Review Question
-            </h2>
-          </div>
-
-          <button
-            type="button"
-            class="close-button"
-            aria-label="Close"
-            @click="closeDetails"
-          >
-            ×
-          </button>
-
-        </div>
-
-
-        <!-- Question -->
-        <div class="modal-section">
-
-          <span class="modal-label">
-            Employee Question
+        <div class="summary-card">
+          <span class="summary-label">
+            Open Gaps
           </span>
 
-          <div class="question-box">
-            {{ selectedGap.question }}
-          </div>
+          <strong>
+            {{ gaps.length }}
+          </strong>
 
+          <p>
+            Need Owner attention
+          </p>
         </div>
 
+        <div class="summary-card">
+          <span class="summary-label">
+            Total Questions
+          </span>
 
-        <!-- Gap Information -->
-        <div class="modal-grid">
+          <strong>
+            {{ gaps.length }}
+          </strong>
 
-          <div class="modal-info">
-
-            <span>
-              Status
-            </span>
-
-            <strong>
-              {{ selectedGap.status }}
-            </strong>
-
-          </div>
-
-
-          <div class="modal-info">
-
-            <span>
-              Occurrences
-            </span>
-
-            <strong>
-              {{ selectedGap.occurrences }}
-            </strong>
-
-          </div>
-
-
-          <div class="modal-info">
-
-            <span>
-              First Identified
-            </span>
-
-            <strong>
-              {{ selectedGap.date }}
-            </strong>
-
-          </div>
-
+          <p>
+            Questions identified as gaps
+          </p>
         </div>
 
+        <div class="summary-card">
+          <span class="summary-label">
+            Retrieval Threshold
+          </span>
 
-        <!-- Recommended Action -->
-        <div class="recommendation">
+          <strong>
+            70%
+          </strong>
 
-          <div class="recommendation-icon">
-            →
-          </div>
-
-          <div>
-
-            <strong>
-              Recommended action
-            </strong>
-
-            <p>
-              Consider documenting a procedure that answers
-              this question so Handoff can provide employees
-              with a grounded answer in the future.
-            </p>
-
-          </div>
-
-        </div>
-
-
-        <!-- Modal Actions -->
-        <div class="modal-actions">
-
-          <button
-            type="button"
-            class="secondary-button"
-            @click="closeDetails"
-          >
-            Close
-          </button>
-
-          <button
-            v-if="selectedGap.status === 'Open'"
-            type="button"
-            class="primary-button"
-            @click="markReviewed"
-          >
-            Mark as Reviewed
-          </button>
-
+          <p>
+            Questions below this threshold are logged
+          </p>
         </div>
 
       </section>
 
-    </div>
+      <!-- =========================================
+           Explanation Banner
+           ========================================= -->
+      <section class="info-banner">
 
+        <div class="info-icon">
+          i
+        </div>
 
-    <!-- =========================================
-         Prototype Notice
-         ========================================= -->
-    <section class="prototype-note">
+        <div>
+          <strong>
+            Why documentation gaps matter
+          </strong>
 
-      <strong>
-        Prototype note
-      </strong>
+          <p>
+            Handoff is designed to avoid guessing when approved
+            knowledge does not contain enough information to answer
+            a question. These gaps help Owners identify processes
+            that should be documented.
+          </p>
+        </div>
 
-      <p>
-        Documentation gaps are currently represented with
-        prototype data. The completed application will retrieve
-        gap records from the Handoff API using GET /api/gaps.
-      </p>
+      </section>
 
-    </section>
+      <!-- =========================================
+           Search
+           ========================================= -->
+      <section class="filters">
+
+        <div class="search-wrapper">
+
+          <label for="gap-search">
+            Search questions
+          </label>
+
+          <input
+            id="gap-search"
+            v-model="searchQuery"
+            type="search"
+            placeholder="Search documentation gaps..."
+          />
+
+        </div>
+
+        <button
+          type="button"
+          class="clear-filter-button"
+          @click="clearFilters"
+        >
+          Clear Search
+        </button>
+
+      </section>
+
+      <!-- =========================================
+           Gap List
+           ========================================= -->
+      <section class="gap-list">
+
+        <div
+          v-if="visibleGaps.length === 0"
+          class="empty-state"
+        >
+          <div class="empty-icon">
+            ✓
+          </div>
+
+          <h2>
+            No documentation gaps found
+          </h2>
+
+          <p>
+            {{
+              gaps.length === 0
+                ? 'Handoff has not logged any unanswered questions yet.'
+                : 'Try changing your search.'
+            }}
+          </p>
+        </div>
+
+        <article
+          v-for="gap in visibleGaps"
+          :key="gap.id"
+          class="gap-card"
+        >
+
+          <div class="gap-card-main">
+
+            <div class="question-icon">
+              ?
+            </div>
+
+            <div class="gap-content">
+
+              <div class="gap-title-row">
+
+                <h2>
+                  {{ gap.question }}
+                </h2>
+
+                <span class="status open">
+                  Open
+                </span>
+
+              </div>
+
+              <div class="gap-meta">
+
+                <span>
+                  Identified {{ formatDate(gap.created_at) }}
+                </span>
+
+                <span>
+                  Similarity:
+                  {{ formatSimilarity(gap.similarity) }}
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          <button
+            type="button"
+            class="view-button"
+            @click="viewGap(gap)"
+          >
+            Review
+          </button>
+
+        </article>
+
+      </section>
+
+      <!-- =========================================
+           Gap Details Modal
+           ========================================= -->
+      <div
+        v-if="showDetails && selectedGap"
+        class="modal-backdrop"
+        @click.self="closeDetails"
+      >
+
+        <section
+          class="gap-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="gap-modal-title"
+        >
+
+          <div class="modal-header">
+
+            <div>
+              <p class="eyebrow">
+                Documentation Gap
+              </p>
+
+              <h2 id="gap-modal-title">
+                Review Question
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              class="close-button"
+              aria-label="Close"
+              @click="closeDetails"
+            >
+              ×
+            </button>
+
+          </div>
+
+          <!-- Question -->
+          <div class="modal-section">
+
+            <span class="modal-label">
+              Employee Question
+            </span>
+
+            <div class="question-box">
+              {{ selectedGap.question }}
+            </div>
+
+          </div>
+
+          <!-- Gap Information -->
+          <div class="modal-grid">
+
+            <div class="modal-info">
+
+              <span>
+                Status
+              </span>
+
+              <strong>
+                Open
+              </strong>
+
+            </div>
+
+            <div class="modal-info">
+
+              <span>
+                Similarity
+              </span>
+
+              <strong>
+                {{ formatSimilarity(selectedGap.similarity) }}
+              </strong>
+
+            </div>
+
+            <div class="modal-info">
+
+              <span>
+                Identified
+              </span>
+
+              <strong>
+                {{ formatDate(selectedGap.created_at) }}
+              </strong>
+
+            </div>
+
+          </div>
+
+          <!-- Recommended Action -->
+          <div class="recommendation">
+
+            <div class="recommendation-icon">
+              →
+            </div>
+
+            <div>
+
+              <strong>
+                Recommended action
+              </strong>
+
+              <p>
+                Consider documenting a procedure that answers
+                this question so Handoff can provide employees
+                with a grounded answer in the future.
+              </p>
+
+            </div>
+
+          </div>
+
+          <!-- Modal Actions -->
+          <div class="modal-actions">
+
+            <button
+              type="button"
+              class="secondary-button"
+              @click="closeDetails"
+            >
+              Close
+            </button>
+
+          </div>
+
+        </section>
+
+      </div>
+
+      <!-- =========================================
+           Live Data Notice
+           ========================================= -->
+      <section class="prototype-note">
+
+        <strong>
+          Connected documentation gap service
+        </strong>
+
+        <p>
+          Documentation gaps are retrieved from the Handoff API
+          and PostgreSQL database using GET /api/gaps.
+        </p>
+
+      </section>
+
+    </template>
 
   </main>
 </template>
@@ -595,6 +545,71 @@ const clearFilters = () => {
   color: #65756f;
   font-size: 15px;
   line-height: 1.6;
+}
+
+
+/* =========================================
+   Loading / Error
+   ========================================= */
+
+.status-message,
+.error-message {
+  max-width: 1120px;
+  margin: 0 auto 24px;
+  padding: 20px;
+  border: 1px solid #e2ddd5;
+  border-radius: 10px;
+  background: white;
+}
+
+.status-message strong {
+  color: #173c35;
+}
+
+.status-message p {
+  margin: 5px 0 0;
+  color: #75817c;
+  font-size: 13px;
+}
+
+.error-message {
+  display: flex;
+  gap: 12px;
+  border-color: #e6c4b5;
+  background: #fbf1ec;
+}
+
+.error-icon {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #b85f34;
+  color: white;
+  font-weight: 700;
+}
+
+.error-message strong {
+  color: #9a4f2d;
+}
+
+.error-message p {
+  margin: 4px 0 10px;
+  color: #74594c;
+  font-size: 13px;
+}
+
+.retry-button {
+  padding: 8px 13px;
+  border: 1px solid #d7c2b7;
+  border-radius: 7px;
+  background: white;
+  color: #8f4d2e;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 
@@ -684,7 +699,7 @@ const clearFilters = () => {
 
 
 /* =========================================
-   Filters
+   Search
    ========================================= */
 
 .filters {
@@ -692,7 +707,7 @@ const clearFilters = () => {
   margin: 0 auto 16px;
   padding: 16px;
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) 180px auto;
+  grid-template-columns: minmax(240px, 1fr) auto;
   align-items: end;
   gap: 12px;
   border: 1px solid #e2ddd5;
@@ -700,8 +715,7 @@ const clearFilters = () => {
   background: white;
 }
 
-.search-wrapper,
-.status-wrapper {
+.search-wrapper {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -715,8 +729,7 @@ const clearFilters = () => {
   text-transform: uppercase;
 }
 
-.filters input,
-.filters select {
+.filters input {
   height: 40px;
   box-sizing: border-box;
   border: 1px solid #dcd5cc;
@@ -728,8 +741,7 @@ const clearFilters = () => {
   font-size: 13px;
 }
 
-.filters input:focus,
-.filters select:focus {
+.filters input:focus {
   outline: none;
   border-color: #7da99b;
   box-shadow: 0 0 0 3px rgba(39, 91, 79, 0.08);
@@ -834,11 +846,6 @@ const clearFilters = () => {
 .status.open {
   background: #f5e4d9;
   color: #a45b38;
-}
-
-.status.reviewed {
-  background: #dcebe5;
-  color: #275b4f;
 }
 
 
@@ -1054,39 +1061,25 @@ const clearFilters = () => {
   gap: 10px;
 }
 
-.secondary-button,
-.primary-button {
+.secondary-button {
   min-height: 40px;
   padding: 0 16px;
+  border: 1px solid #d8d0c7;
   border-radius: 8px;
+  background: white;
+  color: #496058;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-}
-
-.secondary-button {
-  border: 1px solid #d8d0c7;
-  background: white;
-  color: #496058;
 }
 
 .secondary-button:hover {
   background: #f7f3ed;
 }
 
-.primary-button {
-  border: 1px solid #275b4f;
-  background: #275b4f;
-  color: white;
-}
-
-.primary-button:hover {
-  background: #204d43;
-}
-
 
 /* =========================================
-   Prototype Notice
+   Live Data Notice
    ========================================= */
 
 .prototype-note {
