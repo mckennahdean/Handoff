@@ -4,31 +4,16 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-/*
- * Load the procedure that was created on the Capture Procedure page.
- *
- * The capture page stores the procedure temporarily in localStorage
- * so this review page can display the information that was entered.
- */
 const storedProcedure = localStorage.getItem('pendingProcedure')
 
 const pendingProcedure = storedProcedure
   ? JSON.parse(storedProcedure)
   : null
 
-/*
- * Procedure title comes from the Capture Procedure page.
- *
- * Customer Returns is kept as a fallback so the review page still
- * displays useful prototype data if someone navigates directly here.
- */
 const title = ref(
   pendingProcedure?.title || 'Customer Returns'
 )
 
-/*
- * Capture information displayed beneath the procedure title.
- */
 const captureDescription = computed(() => {
   if (pendingProcedure?.captureMethod === 'upload') {
     return `Captured using Uploaded audio${
@@ -55,83 +40,50 @@ const captureDescription = computed(() => {
   return 'Captured using Owner recording'
 })
 
-/*
- * These are prototype AI-structured steps.
- *
- * In the completed backend implementation, these values will come
- * from the AI structuring service.
- */
-const steps = ref([
-  'Verify the customer and original purchase information.',
-  'Confirm that the item meets the return requirements.',
-  'Process the return using the approved return method.',
-  'Provide the customer with the appropriate confirmation.'
-])
+const steps = ref(
+  Array.isArray(pendingProcedure?.steps) &&
+  pendingProcedure.steps.length > 0
+    ? [...pendingProcedure.steps]
+    : [
+        'Verify the customer and original purchase information.',
+        'Confirm that the item meets the return requirements.',
+        'Process the return using the approved return method.',
+        'Provide the customer with the appropriate confirmation.'
+      ]
+)
 
-/*
- * Important warnings identified during the structuring process.
- *
- * These are editable by the Owner before approval.
- */
-const warnings = ref([
-  'Items outside the return policy require Owner review.',
-  'Refunds should not be issued until the return requirements are verified.'
-])
+const warnings = ref(
+  Array.isArray(pendingProcedure?.warnings)
+    ? [...pendingProcedure.warnings]
+    : [
+        'Items outside the return policy require Owner review.',
+        'Refunds should not be issued until the return requirements are verified.'
+      ]
+)
 
-/*
- * Controls the Needs Changes modal.
- */
 const showChangesModal = ref(false)
-
-/*
- * Stores the required Owner comment when a procedure needs changes.
- */
 const changesComment = ref('')
-
-/*
- * Displays success or informational messages.
- */
 const message = ref('')
-
-/*
- * Prevents repeated submissions while an action is processing.
- */
+const errorMessage = ref('')
 const isSubmitting = ref(false)
+const approvedLastConfirmed = ref(null)
 
-/*
- * Add another editable procedure step.
- */
 const addStep = () => {
   steps.value.push('')
 }
 
-/*
- * Remove a procedure step.
- */
 const removeStep = (index) => {
   steps.value.splice(index, 1)
 }
 
-/*
- * Add another warning.
- */
 const addWarning = () => {
   warnings.value.push('')
 }
 
-/*
- * Remove a warning.
- */
 const removeWarning = (index) => {
   warnings.value.splice(index, 1)
 }
 
-/*
- * Send the procedure back for changes.
- *
- * The Owner must provide a comment so the reason for the requested
- * changes is documented.
- */
 const submitChanges = () => {
   if (!changesComment.value.trim()) {
     return
@@ -139,10 +91,6 @@ const submitChanges = () => {
 
   isSubmitting.value = true
 
-  /*
-   * Store the requested changes in localStorage as a prototype
-   * stand-in for the future backend approval workflow.
-   */
   const changesRequest = {
     title: title.value,
     status: 'Needs Changes',
@@ -160,117 +108,123 @@ const submitChanges = () => {
     isSubmitting.value = false
     showChangesModal.value = false
     message.value = 'Procedure returned for changes.'
+    errorMessage.value = ''
     changesComment.value = ''
   }, 400)
 }
 
-/*
- * Approve the procedure.
- *
- * This is the important approval-gate action:
- *
- * 1. Create an approved procedure record.
- * 2. Add it to the stored Handoff procedures.
- * 3. Keep the approvedProcedure record for compatibility
- *    with the rest of the current prototype.
- *
- * Employees only see procedures whose status is Approved.
- */
-const approveProcedure = () => {
+const approveProcedure = async () => {
   if (isSubmitting.value) {
+    return
+  }
+
+  message.value = ''
+  errorMessage.value = ''
+
+  const cleanTitle = title.value.trim()
+
+  const cleanSteps = steps.value
+    .map((step) => step.trim())
+    .filter((step) => step.length > 0)
+
+  const cleanWarnings = warnings.value
+    .map((warning) => warning.trim())
+    .filter((warning) => warning.length > 0)
+
+  if (!cleanTitle) {
+    errorMessage.value =
+      'Procedure title cannot be empty.'
+    return
+  }
+
+  if (cleanSteps.length === 0) {
+    errorMessage.value =
+      'Procedure must contain at least one step.'
     return
   }
 
   isSubmitting.value = true
 
-  const approvedProcedure = {
-    id: Date.now(),
-    title: title.value,
-    status: 'Approved',
-    lastConfirmed: 'September 12, 2026'
-  }
+  try {
+    const response = await fetch(
+      'http://127.0.0.1:8000/api/approve-procedure',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: cleanTitle,
+          steps: cleanSteps,
+          warnings: cleanWarnings
+        })
+      }
+    )
 
-  /*
-   * Retrieve previously approved procedures.
-   *
-   * Using an array allows the prototype to support multiple
-   * procedures instead of replacing the previous one.
-   */
-  const existingProcedures = JSON.parse(
-    localStorage.getItem('handoffProcedures') || '[]'
-  )
+    const data = await response.json()
 
-  /*
-   * Prevent the same procedure from being added multiple times
-   * if the Owner accidentally clicks Approve more than once.
-   */
-  const alreadyApproved = existingProcedures.some(
-    (procedure) =>
-      procedure.title === approvedProcedure.title
-  )
+    if (!response.ok) {
+      throw new Error(
+        data.detail || 'Unable to approve procedure.'
+      )
+    }
 
-  if (!alreadyApproved) {
-    existingProcedures.push(approvedProcedure)
-  }
+    steps.value = cleanSteps
+    warnings.value = cleanWarnings
 
-  /*
-   * Store the complete approved-procedure collection.
-   */
-  localStorage.setItem(
-    'handoffProcedures',
-    JSON.stringify(existingProcedures)
-  )
+    approvedLastConfirmed.value =
+      data.last_confirmed || null
 
-  /*
-   * Keep a single approvedProcedure record as well.
-   * This maintains compatibility with the current prototype.
-   */
-  localStorage.setItem(
-    'approvedProcedure',
-    JSON.stringify(approvedProcedure)
-  )
+    localStorage.removeItem('pendingProcedure')
 
-  /*
-   * Remove the procedure from the pending capture state because
-   * it has now passed the Owner approval gate.
-   */
-  localStorage.removeItem('pendingProcedure')
-
-  setTimeout(() => {
-    isSubmitting.value = false
     message.value = 'Procedure approved successfully.'
-  }, 400)
+  } catch (error) {
+    console.error(error)
+
+    errorMessage.value =
+      error.message ||
+      'Handoff could not approve the procedure.'
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
-/*
- * Return to the Procedures page after reviewing.
- */
 const continueReviewing = () => {
   router.push('/procedures')
 }
 
-/*
- * Go back to the Owner Dashboard.
- */
 const goToDashboard = () => {
   router.push('/owner-dashboard')
 }
 
-/*
- * Determine whether the procedure has been approved during
- * the current review session.
- */
 const isApproved = computed(() => {
   return message.value === 'Procedure approved successfully.'
+})
+
+const formattedLastConfirmed = computed(() => {
+  if (!approvedLastConfirmed.value) {
+    return isApproved.value
+      ? 'Confirmed'
+      : 'Not yet approved'
+  }
+
+  const date = new Date(approvedLastConfirmed.value)
+
+  if (Number.isNaN(date.getTime())) {
+    return approvedLastConfirmed.value
+  }
+
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
 })
 </script>
 
 <template>
   <main class="review-page">
 
-    <!-- =========================================
-         Page Header
-         ========================================= -->
     <section class="page-header">
       <div>
         <p class="eyebrow">Owner Workspace</p>
@@ -296,16 +250,15 @@ const isApproved = computed(() => {
 
         <span class="workflow-arrow">→</span>
 
-        <span class="workflow-step">
+        <span
+          class="workflow-step"
+          :class="{ complete: isApproved }"
+        >
           3. Approve
         </span>
       </div>
     </section>
 
-
-    <!-- =========================================
-         Approval Gate Notice
-         ========================================= -->
     <section class="approval-notice">
       <div class="notice-icon">
         ✓
@@ -321,10 +274,6 @@ const isApproved = computed(() => {
       </div>
     </section>
 
-
-    <!-- =========================================
-         Success Message
-         ========================================= -->
     <section
       v-if="message"
       class="success-message"
@@ -342,13 +291,23 @@ const isApproved = computed(() => {
       </div>
     </section>
 
+    <section
+      v-if="errorMessage"
+      class="error-message"
+    >
+      <span class="error-icon">!</span>
 
-    <!-- =========================================
-         Structured Procedure
-         ========================================= -->
+      <div>
+        <strong>Unable to approve procedure</strong>
+
+        <p>
+          {{ errorMessage }}
+        </p>
+      </div>
+    </section>
+
     <section class="procedure-card">
 
-      <!-- Procedure Header -->
       <div class="procedure-header">
         <div>
           <p class="structured-label">
@@ -368,10 +327,6 @@ const isApproved = computed(() => {
         </div>
       </div>
 
-
-      <!-- =========================================
-           Procedure Steps
-           ========================================= -->
       <section class="content-section">
         <div class="section-heading">
           <div>
@@ -401,11 +356,12 @@ const isApproved = computed(() => {
             <textarea
               v-model="steps[index]"
               rows="2"
+              :disabled="isApproved"
               :aria-label="`Procedure step ${index + 1}`"
             ></textarea>
 
             <button
-              v-if="steps.length > 1"
+              v-if="steps.length > 1 && !isApproved"
               type="button"
               class="remove-button"
               @click="removeStep(index)"
@@ -418,6 +374,7 @@ const isApproved = computed(() => {
         </div>
 
         <button
+          v-if="!isApproved"
           type="button"
           class="add-item-button"
           @click="addStep"
@@ -426,10 +383,6 @@ const isApproved = computed(() => {
         </button>
       </section>
 
-
-      <!-- =========================================
-           Important Warnings
-           ========================================= -->
       <section class="content-section warnings-section">
         <div class="section-heading">
           <div>
@@ -456,11 +409,12 @@ const isApproved = computed(() => {
             <textarea
               v-model="warnings[index]"
               rows="2"
+              :disabled="isApproved"
               :aria-label="`Warning ${index + 1}`"
             ></textarea>
 
             <button
-              v-if="warnings.length > 1"
+              v-if="warnings.length > 1 && !isApproved"
               type="button"
               class="remove-button"
               @click="removeWarning(index)"
@@ -473,6 +427,7 @@ const isApproved = computed(() => {
         </div>
 
         <button
+          v-if="!isApproved"
           type="button"
           class="add-item-button"
           @click="addWarning"
@@ -481,17 +436,13 @@ const isApproved = computed(() => {
         </button>
       </section>
 
-
-      <!-- =========================================
-           Procedure Metadata
-           ========================================= -->
       <section class="metadata-grid">
 
         <div class="metadata-card">
           <span>Last Confirmed</span>
 
           <strong>
-            {{ isApproved ? 'September 12, 2026' : 'Not yet approved' }}
+            {{ formattedLastConfirmed }}
           </strong>
         </div>
 
@@ -499,19 +450,16 @@ const isApproved = computed(() => {
           <span>Availability</span>
 
           <strong>
-            {{ isApproved
-              ? 'Available to employees'
-              : 'Owner review required'
+            {{
+              isApproved
+                ? 'Available to employees'
+                : 'Owner review required'
             }}
           </strong>
         </div>
 
       </section>
 
-
-      <!-- =========================================
-           Approval Actions
-           ========================================= -->
       <section class="action-area">
 
         <div class="action-left">
@@ -542,7 +490,11 @@ const isApproved = computed(() => {
             :disabled="isSubmitting"
             @click="approveProcedure"
           >
-            {{ isSubmitting ? 'Approving...' : 'Approve Procedure' }}
+            {{
+              isSubmitting
+                ? 'Approving...'
+                : 'Approve Procedure'
+            }}
           </button>
 
           <button
@@ -560,10 +512,6 @@ const isApproved = computed(() => {
 
     </section>
 
-
-    <!-- =========================================
-         Post-Approval Actions
-         ========================================= -->
     <section
       v-if="isApproved"
       class="post-approval"
@@ -592,10 +540,6 @@ const isApproved = computed(() => {
       </button>
     </section>
 
-
-    <!-- =========================================
-         Needs Changes Modal
-         ========================================= -->
     <div
       v-if="showChangesModal"
       class="modal-backdrop"
@@ -661,7 +605,11 @@ const isApproved = computed(() => {
             "
             @click="submitChanges"
           >
-            {{ isSubmitting ? 'Submitting...' : 'Submit Changes' }}
+            {{
+              isSubmitting
+                ? 'Submitting...'
+                : 'Submit Changes'
+            }}
           </button>
 
         </div>
@@ -673,10 +621,6 @@ const isApproved = computed(() => {
 </template>
 
 <style scoped>
-/* =========================================
-   Page Layout
-   ========================================= */
-
 .review-page {
   min-height: calc(100vh - 72px);
   padding: 42px 24px 70px;
@@ -714,11 +658,6 @@ const isApproved = computed(() => {
   font-size: 15px;
 }
 
-
-/* =========================================
-   Workflow Indicator
-   ========================================= */
-
 .workflow-status {
   display: flex;
   align-items: center;
@@ -749,11 +688,6 @@ const isApproved = computed(() => {
 .workflow-arrow {
   color: #9a9f9b;
 }
-
-
-/* =========================================
-   Approval Notice
-   ========================================= */
 
 .approval-notice {
   max-width: 1120px;
@@ -793,11 +727,6 @@ const isApproved = computed(() => {
   font-size: 13px;
 }
 
-
-/* =========================================
-   Success Message
-   ========================================= */
-
 .success-message {
   max-width: 1120px;
   margin: 0 auto 24px;
@@ -820,10 +749,39 @@ const isApproved = computed(() => {
   font-size: 13px;
 }
 
+.error-message {
+  max-width: 1120px;
+  margin: 0 auto 24px;
+  padding: 15px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid #e6c4b5;
+  border-radius: 10px;
+  background: #fbf1ec;
+}
 
-/* =========================================
-   Main Procedure Card
-   ========================================= */
+.error-icon {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #b85f34;
+  color: white;
+  font-weight: 700;
+}
+
+.error-message strong {
+  color: #9a4f2d;
+}
+
+.error-message p {
+  margin: 4px 0 0;
+  color: #74594c;
+  font-size: 13px;
+}
 
 .procedure-card {
   max-width: 1120px;
@@ -834,11 +792,6 @@ const isApproved = computed(() => {
   background: #fff;
   box-shadow: 0 4px 16px rgba(31, 45, 40, 0.05);
 }
-
-
-/* =========================================
-   Procedure Header
-   ========================================= */
 
 .procedure-header {
   display: flex;
@@ -889,11 +842,6 @@ const isApproved = computed(() => {
   font-size: 14px;
 }
 
-
-/* =========================================
-   Content Sections
-   ========================================= */
-
 .content-section {
   padding: 28px 0;
   border-bottom: 1px solid #e6e0d8;
@@ -927,11 +875,6 @@ const isApproved = computed(() => {
   font-size: 11px;
   font-weight: 700;
 }
-
-
-/* =========================================
-   Steps
-   ========================================= */
 
 .steps-list,
 .warnings-list {
@@ -990,6 +933,11 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgba(39, 91, 79, 0.08);
 }
 
+textarea:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
 .remove-button {
   width: 28px;
   height: 28px;
@@ -1018,11 +966,6 @@ textarea:focus {
   cursor: pointer;
 }
 
-
-/* =========================================
-   Metadata
-   ========================================= */
-
 .metadata-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1049,11 +992,6 @@ textarea:focus {
   color: #183d36;
   font-size: 13px;
 }
-
-
-/* =========================================
-   Action Area
-   ========================================= */
 
 .action-area {
   padding-top: 24px;
@@ -1105,11 +1043,6 @@ textarea:focus {
   cursor: not-allowed;
 }
 
-
-/* =========================================
-   Post Approval
-   ========================================= */
-
 .post-approval {
   max-width: 1120px;
   margin: 20px auto 0;
@@ -1140,11 +1073,6 @@ textarea:focus {
   color: #687771;
   font-size: 13px;
 }
-
-
-/* =========================================
-   Modal
-   ========================================= */
 
 .modal-backdrop {
   position: fixed;
@@ -1208,11 +1136,6 @@ textarea:focus {
   justify-content: flex-end;
   gap: 10px;
 }
-
-
-/* =========================================
-   Responsive Layout
-   ========================================= */
 
 @media (max-width: 760px) {
   .review-page {
