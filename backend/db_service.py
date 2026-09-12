@@ -13,12 +13,31 @@ from backend.models import Procedure, Gap
 
 load_dotenv()
 
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
-)
+
+client = None
+
+
+def get_client():
+    global client
+
+    if client is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+
+        if not api_key:
+            raise RuntimeError(
+                "GEMINI_API_KEY is not configured."
+            )
+
+        client = genai.Client(
+            api_key=api_key
+        )
+
+    return client
 
 
 def save_procedure(procedure_data: dict):
+    gemini_client = get_client()
+
     text_for_embedding = (
         procedure_data["title"]
         + " "
@@ -27,7 +46,7 @@ def save_procedure(procedure_data: dict):
         + " ".join(procedure_data["warnings"])
     )
 
-    embedding_response = client.models.embed_content(
+    embedding_response = gemini_client.models.embed_content(
         model="gemini-embedding-2",
         contents=text_for_embedding
     )
@@ -66,7 +85,9 @@ def get_procedures():
 
 
 def find_best_matching_procedure(question: str):
-    embedding_response = client.models.embed_content(
+    gemini_client = get_client()
+
+    embedding_response = gemini_client.models.embed_content(
         model="gemini-embedding-2",
         contents=question
     )
@@ -106,7 +127,7 @@ def log_gap(question: str, similarity: float):
     with Session(engine) as session:
         gap = Gap(
             question=question,
-            similarity=str(similarity)
+            similarity=similarity
         )
 
         session.add(gap)
@@ -124,7 +145,8 @@ def get_gaps():
             {
                 "id": gap.id,
                 "question": gap.question,
-                "similarity": gap.similarity
+                "similarity": gap.similarity,
+                "created_at": gap.created_at
             }
             for gap in gaps
         ]
