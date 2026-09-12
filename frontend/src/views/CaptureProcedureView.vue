@@ -8,28 +8,28 @@ const router = useRouter()
 // Procedure Information
 // =========================================
 
-// Stores the title entered by the Owner.
 const title = ref('')
-
-// Stores the knowledge entered when using manual entry.
 const manualNotes = ref('')
-
-// The selected capture method.
 const captureMethod = ref('record')
 
 // =========================================
-// Audio Recording
+// Recording State
 // =========================================
 
-// Frontend prototype recording state.
 const isRecording = ref(false)
 const recordingSeconds = ref(0)
+const recordedBlob = ref(null)
 
-// Stores the selected uploaded audio file.
-const selectedFile = ref(null)
-
-// Timer used by the prototype recording experience.
 let recordingTimer = null
+let mediaRecorder = null
+let mediaStream = null
+let audioChunks = []
+
+// =========================================
+// File Upload
+// =========================================
+
+const selectedFile = ref(null)
 
 // =========================================
 // Submission State
@@ -39,28 +39,107 @@ const message = ref('')
 const isSubmitting = ref(false)
 const submissionError = ref(false)
 
-
 // =========================================
 // Recording Functions
 // =========================================
 
-// Start the prototype recording timer.
-const startRecording = () => {
+const stopMediaTracks = () => {
+  if (mediaStream) {
+    mediaStream.getTracks().forEach((track) => {
+      track.stop()
+    })
+
+    mediaStream = null
+  }
+}
+
+const startRecording = async () => {
   if (isRecording.value) {
     return
   }
 
-  isRecording.value = true
+  message.value = ''
+  submissionError.value = false
+  recordedBlob.value = null
   recordingSeconds.value = 0
+  audioChunks = []
 
-  recordingTimer = setInterval(() => {
-    recordingSeconds.value += 1
-  }, 1000)
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: true
+    })
+
+    let options = {}
+
+    if (
+      typeof MediaRecorder !== 'undefined' &&
+      MediaRecorder.isTypeSupported('audio/webm')
+    ) {
+      options = {
+        mimeType: 'audio/webm'
+      }
+    }
+
+    mediaRecorder = new MediaRecorder(
+      mediaStream,
+      options
+    )
+
+    mediaRecorder.addEventListener(
+      'dataavailable',
+      (event) => {
+        if (event.data.size > 0) {
+          audioChunks.push(event.data)
+        }
+      }
+    )
+
+    mediaRecorder.addEventListener(
+      'stop',
+      () => {
+        const mimeType =
+          mediaRecorder?.mimeType ||
+          'audio/webm'
+
+        recordedBlob.value = new Blob(
+          audioChunks,
+          {
+            type: mimeType
+          }
+        )
+
+        stopMediaTracks()
+      }
+    )
+
+    mediaRecorder.start()
+
+    isRecording.value = true
+
+    recordingTimer = setInterval(() => {
+      recordingSeconds.value += 1
+    }, 1000)
+  } catch (error) {
+    console.error(error)
+
+    message.value =
+      'Microphone access could not be started. Please allow microphone access or use Upload Audio.'
+
+    submissionError.value = true
+    isRecording.value = false
+
+    stopMediaTracks()
+  }
 }
 
-
-// Stop the prototype recording timer.
 const stopRecording = () => {
+  if (
+    mediaRecorder &&
+    mediaRecorder.state !== 'inactive'
+  ) {
+    mediaRecorder.stop()
+  }
+
   isRecording.value = false
 
   if (recordingTimer) {
@@ -69,21 +148,28 @@ const stopRecording = () => {
   }
 }
 
+const recordAgain = async () => {
+  recordedBlob.value = null
+  recordingSeconds.value = 0
 
-// Format the recording time as MM:SS.
+  await startRecording()
+}
+
 const formattedTime = () => {
-  const minutes = Math.floor(recordingSeconds.value / 60)
-  const seconds = recordingSeconds.value % 60
+  const minutes = Math.floor(
+    recordingSeconds.value / 60
+  )
+
+  const seconds =
+    recordingSeconds.value % 60
 
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
-
 
 // =========================================
 // File Upload
 // =========================================
 
-// Save the selected audio file for the prototype.
 const handleFileUpload = (event) => {
   const file = event.target.files[0]
 
@@ -94,33 +180,31 @@ const handleFileUpload = (event) => {
   }
 }
 
-
 // =========================================
 // Capture Method
 // =========================================
 
-// Change the selected capture method and
-// clear any previous validation message.
 const selectMethod = (method) => {
+  if (isRecording.value) {
+    stopRecording()
+  }
+
   captureMethod.value = method
   message.value = ''
   submissionError.value = false
 }
 
-
 // =========================================
 // Validation
 // =========================================
 
-// Make sure the Owner has provided everything
-// required for the selected capture method.
 const validateForm = () => {
   if (!title.value.trim()) {
     return 'Please enter a procedure title before continuing.'
   }
 
   if (captureMethod.value === 'record') {
-    if (recordingSeconds.value === 0) {
+    if (!recordedBlob.value) {
       return 'Please record some audio before continuing.'
     }
   }
@@ -140,13 +224,75 @@ const validateForm = () => {
   return ''
 }
 
+// =========================================
+// Backend Helpers
+// =========================================
+
+const uploadAudio = async (audioFile) => {
+  const formData = new FormData()
+
+  formData.append(
+    'audio_file',
+    audioFile
+  )
+
+  const response = await fetch(
+    'http://127.0.0.1:8000/api/upload-audio',
+    {
+      method: 'POST',
+      body: formData
+    }
+  )
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(
+      data.detail ||
+      'Unable to transcribe audio.'
+    )
+  }
+
+  if (!data.transcript) {
+    throw new Error(
+      'The transcription service returned no text.'
+    )
+  }
+
+  return data.transcript
+}
+
+const structureKnowledge = async (text) => {
+  const response = await fetch(
+    'http://127.0.0.1:8000/api/structure-procedure',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text
+      })
+    }
+  )
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(
+      data.detail ||
+      'Unable to structure procedure.'
+    )
+  }
+
+  return data
+}
 
 // =========================================
 // Submit Procedure
 // =========================================
 
-// Submit the captured knowledge for AI structuring.
-const submitProcedure = () => {
+const submitProcedure = async () => {
   const validationMessage = validateForm()
 
   if (validationMessage) {
@@ -155,67 +301,183 @@ const submitProcedure = () => {
     return
   }
 
+  if (isSubmitting.value) {
+    return
+  }
+
   isSubmitting.value = true
   message.value = ''
   submissionError.value = false
 
-  // Save temporary prototype data so the next
-  // screen can display the captured procedure.
-  const pendingProcedure = {
-    title: title.value.trim(),
-    captureMethod: captureMethod.value,
-    manualNotes: manualNotes.value.trim(),
-    audioFileName: selectedFile.value
-      ? selectedFile.value.name
-      : null,
-    recordingDuration: recordingSeconds.value,
-    status: 'Pending Review'
-  }
+  try {
+    let knowledgeText = ''
+    let audioFileName = null
 
-  localStorage.setItem(
-    'pendingProcedure',
-    JSON.stringify(pendingProcedure)
-  )
+    // -----------------------------------------
+    // Manual Entry
+    // -----------------------------------------
 
-  // Simulate the AI structuring process.
-  setTimeout(() => {
-    isSubmitting.value = false
+    if (captureMethod.value === 'manual') {
+      knowledgeText =
+        manualNotes.value.trim()
+    }
+
+    // -----------------------------------------
+    // Uploaded Audio
+    // -----------------------------------------
+
+    if (captureMethod.value === 'upload') {
+      message.value =
+        'Transcribing uploaded audio...'
+
+      audioFileName =
+        selectedFile.value.name
+
+      knowledgeText =
+        await uploadAudio(
+          selectedFile.value
+        )
+    }
+
+    // -----------------------------------------
+    // Recorded Audio
+    // -----------------------------------------
+
+    if (captureMethod.value === 'record') {
+      message.value =
+        'Transcribing recording...'
+
+      const mimeType =
+        recordedBlob.value.type ||
+        'audio/webm'
+
+      let extension = 'webm'
+
+      if (mimeType.includes('ogg')) {
+        extension = 'ogg'
+      } else if (
+        mimeType.includes('wav')
+      ) {
+        extension = 'wav'
+      } else if (
+        mimeType.includes('mp4')
+      ) {
+        extension = 'm4a'
+      }
+
+      const recordedFile =
+        new File(
+          [recordedBlob.value],
+          `procedure-recording.${extension}`,
+          {
+            type: mimeType
+          }
+        )
+
+      audioFileName =
+        recordedFile.name
+
+      knowledgeText =
+        await uploadAudio(
+          recordedFile
+        )
+    }
 
     message.value =
-      'Knowledge captured successfully. Handoff is preparing the procedure for Owner review.'
+      'Handoff is structuring the procedure...'
 
-    // Move into the existing approval workflow.
-    setTimeout(() => {
-      router.push('/procedure-review')
-    }, 1200)
-  }, 1000)
+    const structuredProcedure =
+      await structureKnowledge(
+        knowledgeText
+      )
+
+    const pendingProcedure = {
+      title: title.value.trim(),
+      aiSuggestedTitle:
+        structuredProcedure.title,
+      captureMethod:
+        captureMethod.value,
+      manualNotes:
+        manualNotes.value.trim(),
+      transcript:
+        knowledgeText,
+      audioFileName,
+      recordingDuration:
+        captureMethod.value === 'record'
+          ? formattedTime()
+          : null,
+      steps:
+        structuredProcedure.steps || [],
+      warnings:
+        structuredProcedure.warnings || [],
+      status: 'Pending Review'
+    }
+
+    localStorage.setItem(
+      'pendingProcedure',
+      JSON.stringify(
+        pendingProcedure
+      )
+    )
+
+    message.value =
+      'Knowledge structured successfully. Opening Owner review...'
+
+    router.push(
+      '/procedure-review'
+    )
+  } catch (error) {
+    console.error(error)
+
+    submissionError.value = true
+
+    message.value =
+      error.message ||
+      'Handoff could not process the procedure.'
+  } finally {
+    isSubmitting.value = false
+  }
 }
-
 
 // =========================================
 // Cancel
 // =========================================
 
-// Return to the Procedures page without submitting.
 const cancel = () => {
+  if (isRecording.value) {
+    stopRecording()
+  }
+
   if (recordingTimer) {
     clearInterval(recordingTimer)
     recordingTimer = null
   }
 
+  stopMediaTracks()
+
   router.push('/procedures')
 }
 
+// =========================================
+// Cleanup
+// =========================================
 
-// Clean up the recording timer if the
-// component is removed from the page.
 onBeforeUnmount(() => {
   if (recordingTimer) {
     clearInterval(recordingTimer)
+    recordingTimer = null
   }
+
+  if (
+    mediaRecorder &&
+    mediaRecorder.state !== 'inactive'
+  ) {
+    mediaRecorder.stop()
+  }
+
+  stopMediaTracks()
 })
 </script>
-
 
 <template>
   <main class="capture-page">
@@ -239,7 +501,6 @@ onBeforeUnmount(() => {
         </p>
       </div>
     </section>
-
 
     <!-- =========================================
          Workflow Indicator
@@ -285,7 +546,6 @@ onBeforeUnmount(() => {
 
     </section>
 
-
     <!-- =========================================
          Capture Form
          ========================================= -->
@@ -308,7 +568,6 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-
       <!-- =========================================
            Procedure Title
            ========================================= -->
@@ -323,6 +582,7 @@ onBeforeUnmount(() => {
           v-model="title"
           type="text"
           placeholder="Example: Customer Returns"
+          :disabled="isSubmitting"
         />
 
         <span class="field-help">
@@ -330,7 +590,6 @@ onBeforeUnmount(() => {
         </span>
 
       </div>
-
 
       <!-- =========================================
            Capture Method
@@ -350,7 +609,6 @@ onBeforeUnmount(() => {
 
         </div>
 
-
         <div class="method-options">
 
           <!-- Record Audio -->
@@ -360,6 +618,7 @@ onBeforeUnmount(() => {
             :class="{
               selected: captureMethod === 'record'
             }"
+            :disabled="isSubmitting"
             @click="selectMethod('record')"
           >
 
@@ -386,7 +645,6 @@ onBeforeUnmount(() => {
 
           </button>
 
-
           <!-- Upload Audio -->
           <button
             type="button"
@@ -394,6 +652,7 @@ onBeforeUnmount(() => {
             :class="{
               selected: captureMethod === 'upload'
             }"
+            :disabled="isSubmitting"
             @click="selectMethod('upload')"
           >
 
@@ -420,7 +679,6 @@ onBeforeUnmount(() => {
 
           </button>
 
-
           <!-- Enter Manually -->
           <button
             type="button"
@@ -428,6 +686,7 @@ onBeforeUnmount(() => {
             :class="{
               selected: captureMethod === 'manual'
             }"
+            :disabled="isSubmitting"
             @click="selectMethod('manual')"
           >
 
@@ -457,7 +716,6 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-
       <!-- =========================================
            Record Audio
            ========================================= -->
@@ -483,8 +741,6 @@ onBeforeUnmount(() => {
           teaching it to a new employee.
         </p>
 
-
-        <!-- Recording timer -->
         <div
           v-if="isRecording"
           class="recording-status"
@@ -496,19 +752,19 @@ onBeforeUnmount(() => {
           </span>
         </div>
 
-
-        <!-- Start recording -->
         <button
-          v-if="!isRecording && recordingSeconds === 0"
+          v-if="
+            !isRecording &&
+            !recordedBlob
+          "
           type="button"
           class="primary-capture-button"
+          :disabled="isSubmitting"
           @click="startRecording"
         >
           Start Recording
         </button>
 
-
-        <!-- Stop recording -->
         <button
           v-if="isRecording"
           type="button"
@@ -518,10 +774,11 @@ onBeforeUnmount(() => {
           Stop Recording
         </button>
 
-
-        <!-- Recording captured state -->
         <div
-          v-if="recordingSeconds > 0 && !isRecording"
+          v-if="
+            recordedBlob &&
+            !isRecording
+          "
           class="recording-complete"
         >
           <span class="complete-icon">
@@ -534,21 +791,22 @@ onBeforeUnmount(() => {
             </strong>
 
             <span>
-              Duration: {{ formattedTime() }}
+              Duration:
+              {{ formattedTime() }}
             </span>
           </div>
 
           <button
             type="button"
             class="record-again-button"
-            @click="startRecording"
+            :disabled="isSubmitting"
+            @click="recordAgain"
           >
             Record Again
           </button>
         </div>
 
       </div>
-
 
       <!-- =========================================
            Upload Audio
@@ -571,7 +829,6 @@ onBeforeUnmount(() => {
           you want Handoff to structure.
         </p>
 
-
         <label
           for="audio-upload"
           class="upload-button"
@@ -583,12 +840,11 @@ onBeforeUnmount(() => {
           id="audio-upload"
           class="hidden-file-input"
           type="file"
-          accept="audio/*"
+          accept=".wav,.mp3,.m4a,.aac,.ogg,.flac,.webm,audio/*"
+          :disabled="isSubmitting"
           @change="handleFileUpload"
         />
 
-
-        <!-- Selected file -->
         <div
           v-if="selectedFile"
           class="selected-file"
@@ -603,13 +859,12 @@ onBeforeUnmount(() => {
             </strong>
 
             <span>
-              Ready for submission
+              Ready for transcription
             </span>
           </div>
         </div>
 
       </div>
-
 
       <!-- =========================================
            Manual Entry
@@ -634,6 +889,7 @@ onBeforeUnmount(() => {
 
         <textarea
           v-model="manualNotes"
+          :disabled="isSubmitting"
           placeholder="Describe the procedure, important steps, warnings, exceptions, or anything an employee should know..."
         ></textarea>
 
@@ -644,9 +900,8 @@ onBeforeUnmount(() => {
 
       </div>
 
-
       <!-- =========================================
-           Prototype Information
+           Connected System Information
            ========================================= -->
       <div class="prototype-note">
 
@@ -660,16 +915,14 @@ onBeforeUnmount(() => {
           </strong>
 
           <p>
-            The captured knowledge will eventually be sent to
-            Handoff's AI structuring service. The AI will organize
-            the information into a draft procedure, which must be
-            reviewed and approved by the Owner before employees
-            can use it.
+            Audio is transcribed by Handoff's AI service and the
+            captured knowledge is organized into a draft procedure.
+            The Owner must review and approve the procedure before
+            employees can use it.
           </p>
         </div>
 
       </div>
-
 
       <!-- =========================================
            Status Message
@@ -682,7 +935,6 @@ onBeforeUnmount(() => {
         {{ message }}
       </div>
 
-
       <!-- =========================================
            Form Actions
            ========================================= -->
@@ -691,6 +943,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="cancel-button"
+          :disabled="isSubmitting"
           @click="cancel"
         >
           Cancel
@@ -718,22 +971,12 @@ onBeforeUnmount(() => {
   </main>
 </template>
 
-
 <style scoped>
-/* =========================================
-   Overall Capture Page
-   ========================================= */
-
 .capture-page {
   width: min(1000px, calc(100% - 40px));
   margin: 0 auto;
   padding: 55px 0 75px;
 }
-
-
-/* =========================================
-   Page Header
-   ========================================= */
 
 .page-header {
   margin-bottom: 32px;
@@ -761,11 +1004,6 @@ onBeforeUnmount(() => {
   font-size: 17px;
   line-height: 1.5;
 }
-
-
-/* =========================================
-   Workflow Indicator
-   ========================================= */
 
 .workflow {
   display: flex;
@@ -827,11 +1065,6 @@ onBeforeUnmount(() => {
   background: #ded7d0;
 }
 
-
-/* =========================================
-   Main Capture Card
-   ========================================= */
-
 .capture-card {
   padding: 34px;
   background: #ffffff;
@@ -839,11 +1072,6 @@ onBeforeUnmount(() => {
   border-radius: 14px;
   box-shadow: 0 3px 12px rgba(60, 45, 35, 0.05);
 }
-
-
-/* =========================================
-   Section Heading
-   ========================================= */
 
 .section-heading {
   margin-bottom: 28px;
@@ -869,11 +1097,6 @@ onBeforeUnmount(() => {
   color: #68747a;
   font-size: 14px;
 }
-
-
-/* =========================================
-   Form Fields
-   ========================================= */
 
 .form-group {
   margin-bottom: 34px;
@@ -916,11 +1139,6 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 
-
-/* =========================================
-   Capture Method Options
-   ========================================= */
-
 .method-section {
   margin-bottom: 28px;
 }
@@ -961,7 +1179,7 @@ onBeforeUnmount(() => {
     box-shadow 0.2s ease;
 }
 
-.method-option:hover {
+.method-option:hover:not(:disabled) {
   border-color: #b9b0a8;
   box-shadow: 0 2px 8px rgba(60, 45, 35, 0.05);
 }
@@ -970,6 +1188,11 @@ onBeforeUnmount(() => {
   border-color: #275b4f;
   background: #f3f8f5;
   box-shadow: 0 0 0 2px rgba(39, 91, 79, 0.08);
+}
+
+.method-option:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .method-icon {
@@ -1002,11 +1225,6 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-
-/* =========================================
-   Capture Area
-   ========================================= */
-
 .capture-area {
   display: flex;
   align-items: center;
@@ -1036,11 +1254,6 @@ onBeforeUnmount(() => {
   font-size: 13px;
   line-height: 1.5;
 }
-
-
-/* =========================================
-   Recording
-   ========================================= */
 
 .primary-capture-button,
 .stop-button,
@@ -1108,11 +1321,6 @@ onBeforeUnmount(() => {
   }
 }
 
-
-/* =========================================
-   Recording Complete
-   ========================================= */
-
 .recording-complete {
   display: flex;
   align-items: center;
@@ -1169,11 +1377,6 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-
-/* =========================================
-   File Upload
-   ========================================= */
-
 .hidden-file-input {
   display: none;
 }
@@ -1226,11 +1429,6 @@ onBeforeUnmount(() => {
   font-size: 11px;
 }
 
-
-/* =========================================
-   Manual Entry
-   ========================================= */
-
 .manual-area textarea {
   width: min(100%, 700px);
   min-height: 180px;
@@ -1260,11 +1458,6 @@ onBeforeUnmount(() => {
   font-size: 11px;
   text-align: left;
 }
-
-
-/* =========================================
-   Prototype Information
-   ========================================= */
 
 .prototype-note {
   display: flex;
@@ -1305,11 +1498,6 @@ onBeforeUnmount(() => {
   line-height: 1.5;
 }
 
-
-/* =========================================
-   Status Message
-   ========================================= */
-
 .message {
   margin-top: 20px;
   padding: 13px 15px;
@@ -1326,11 +1514,6 @@ onBeforeUnmount(() => {
   background: #f9eee8;
   color: #914923;
 }
-
-
-/* =========================================
-   Form Actions
-   ========================================= */
 
 .form-actions {
   display: flex;
@@ -1360,7 +1543,7 @@ onBeforeUnmount(() => {
   color: #68747a;
 }
 
-.cancel-button:hover {
+.cancel-button:hover:not(:disabled) {
   background: #f7f4f0;
 }
 
@@ -1375,15 +1558,11 @@ onBeforeUnmount(() => {
   transform: translateY(-1px);
 }
 
+.cancel-button:disabled,
 .submit-button:disabled {
   opacity: 0.65;
   cursor: wait;
 }
-
-
-/* =========================================
-   Mobile
-   ========================================= */
 
 @media (max-width: 750px) {
   .capture-page {
