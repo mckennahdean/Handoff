@@ -28,7 +28,7 @@ def save_procedure(procedure_data: dict):
     )
 
     embedding_response = client.models.embed_content(
-        model="gemini-embedding-2",
+        model="gemini-embedding-001",
         contents=text_for_embedding
     )
 
