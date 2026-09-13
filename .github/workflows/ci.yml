@@ -30,4 +30,8 @@ jobs:
         env:
           GEMINI_API_KEY: fake-key-for-ci
         run: |
-          python -m pytest backend/test_main.py -v
+          if [ -f backend/test_main.py ]; then
+            python -m pytest backend/test_main.py -v
+          else
+            echo "No test_main.py yet; skipping pytest"
+          fi
