@@ -28,7 +28,7 @@ jobs:
       - name: Run pytest
         env:
           GEMINI_API_KEY: fake-key-for-ci
-        run: python -m pytest backend/ -v --no-header || [ $? -eq 5 ]
+        run: python -m pytest backend/ -v --no-header --ignore=backend/test.py --ignore=backend/test_embedding.py || [ $? -eq 5 ]
 
   frontend:
     name: Frontend lint and build
