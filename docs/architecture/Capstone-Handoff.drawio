@@ -351,9 +351,9 @@
         <mxCell id="4nFX1pU6c8Bzp4Ei2Kg8-138" parent="1" style="rhombus;whiteSpace=wrap;html=1;shapeInside=1;" value="Approval Gate" vertex="1">
           <mxGeometry height="80" width="80" x="1061" y="360" as="geometry" />
         </mxCell>
-        <mxCell id="4nFX1pU6c8Bzp4Ei2Kg8-139" connectable="0" parent="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;" value="&lt;div&gt;top-k results&amp;nbsp;+ similarity scores&lt;/div&gt;" vertex="1">
-          <mxGeometry x="240" y="580" as="geometry">
-            <mxPoint x="-11" y="-214" as="offset" />
+        <mxCell id="4nFX1pU6c8Bzp4Ei2Kg8-139" connectable="0" parent="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;" value="&lt;div&gt;best matching approved procedure&amp;nbsp;&lt;/div&gt;&lt;div&gt;+ similarity score&lt;/div&gt;" vertex="1">
+          <mxGeometry x="264" y="798" as="geometry">
+            <mxPoint x="-25" y="-426" as="offset" />
           </mxGeometry>
         </mxCell>
         <mxCell id="4nFX1pU6c8Bzp4Ei2Kg8-140" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;startArrow=block;startFill=0;entryX=0.004;entryY=0.62;entryDx=0;entryDy=0;entryPerimeter=0;" target="4nFX1pU6c8Bzp4Ei2Kg8-99" value="">
@@ -420,8 +420,8 @@
             <mxPoint x="1240" y="600" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="6u4TJ5fBg_GV-0wkuneH-3" connectable="0" parent="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;" value="&lt;div&gt;structured procedure&amp;nbsp;+&amp;nbsp;detected gaps&lt;/div&gt;" vertex="1">
-          <mxGeometry x="931" y="370" as="geometry" />
+        <mxCell id="6u4TJ5fBg_GV-0wkuneH-3" connectable="0" parent="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;" value="&lt;div&gt;structured procedure&lt;/div&gt;" vertex="1">
+          <mxGeometry x="898" y="370" as="geometry" />
         </mxCell>
         <mxCell id="6u4TJ5fBg_GV-0wkuneH-6" parent="1" style="rhombus;whiteSpace=wrap;html=1;shapeInside=1;" value="Threshold Gate" vertex="1">
           <mxGeometry height="78" width="78" x="470" y="410" as="geometry" />
