@@ -67,7 +67,7 @@ def get_procedures():
 
 def find_best_matching_procedure(question: str):
     embedding_response = client.models.embed_content(
-        model="gemini-embedding-2",
+        model="gemini-embedding-001",
         contents=question
     )
 
