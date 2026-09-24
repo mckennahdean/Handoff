@@ -51,6 +51,39 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, password_hash: str) -> bool:
     return password_hasher.verify(password, password_hash)
 
+MIN_PASSWORD_LENGTH = 12
+MAX_PASSWORD_LENGTH = 128
+
+
+def password_problems(password: str) -> list[str]:
+    """Return a list of unmet password rules (empty means valid).
+
+    Policy follows PCI DSS v4.0 guidance: minimum 12 characters,
+    plus mixed character types. The maximum prevents oversized
+    inputs from consuming excessive CPU during Argon2 hashing.
+    """
+    problems = []
+
+    if len(password) < MIN_PASSWORD_LENGTH:
+        problems.append(f"at least {MIN_PASSWORD_LENGTH} characters")
+
+    if len(password) > MAX_PASSWORD_LENGTH:
+        problems.append(f"no more than {MAX_PASSWORD_LENGTH} characters")
+
+    if not any(char.isupper() for char in password):
+        problems.append("an uppercase letter")
+
+    if not any(char.islower() for char in password):
+        problems.append("a lowercase letter")
+
+    if not any(char.isdigit() for char in password):
+        problems.append("a number")
+
+    if not any(not char.isalnum() for char in password):
+        problems.append("a special character")
+
+    return problems
+
 
 # ---------- Tokens ----------
 

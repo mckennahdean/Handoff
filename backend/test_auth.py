@@ -15,6 +15,7 @@ from backend.auth_service import (
     generate_invite_code,
     get_current_user,
     hash_password,
+    password_problems,
     verify_password,
 )
 
@@ -22,6 +23,7 @@ from backend.auth_service import (
 client = TestClient(main_module.app)
 
 TEST_SECRET = "test-secret-key-for-pytest-only-0123456789"
+STRONG_PASSWORD = "Handoff-Test-2026"
 
 FAKE_EMPLOYEE = SimpleNamespace(
     id=2,
@@ -166,7 +168,7 @@ def test_signup_rejects_invalid_invite_code(monkeypatch):
         json={
             "name": "Emp",
             "email": "emp@test.com",
-            "password": "password123",
+            "password": STRONG_PASSWORD,
             "invite_code": "WRONG123"
         }
     )
@@ -209,3 +211,26 @@ def test_invite_code_format():
 
     assert len(code) == INVITE_CODE_LENGTH
     assert all(char in INVITE_CODE_ALPHABET for char in code)
+
+# ---------- Password policy ----------
+
+@pytest.mark.parametrize(
+    "weak_password",
+    [
+        "Sh0rt!pass",          # too short (10 characters)
+        "alllowercase-2026",   # no uppercase
+        "ALLUPPERCASE-2026",   # no lowercase
+        "No-Numbers-Here!",    # no number
+        "NoSpecialChars2026",  # no special character
+    ],
+)
+def test_weak_passwords_are_rejected(weak_password):
+    assert password_problems(weak_password) != []
+
+
+def test_strong_password_passes():
+    assert password_problems(STRONG_PASSWORD) == []
+
+
+def test_overly_long_password_is_rejected():
+    assert password_problems("Aa1!" * 40) != []

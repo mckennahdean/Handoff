@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiFetch, saveSession, errorMessage } from '../api.js'
 
@@ -23,6 +23,25 @@ const needsOwner = ref(false)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
+// Password rules shown live as the user types. These mirror the
+// backend rules in auth_service.password_problems, which is the
+// real enforcement. The frontend check is for user experience.
+const passwordChecks = computed(() => {
+  const value = password.value
+
+  return [
+    { label: 'At least 12 characters', met: value.length >= 12 },
+    { label: 'One uppercase letter', met: /[A-Z]/.test(value) },
+    { label: 'One lowercase letter', met: /[a-z]/.test(value) },
+    { label: 'One number', met: /[0-9]/.test(value) },
+    { label: 'One special character', met: /[^A-Za-z0-9]/.test(value) }
+  ]
+})
+
+const passwordIsValid = computed(() =>
+  passwordChecks.value.every((check) => check.met)
+)
+
 // Displays a message after the user takes an action.
 const message = ref('')
 
@@ -44,6 +63,12 @@ const createAccount = async () => {
 
   if (password.value !== confirmPassword.value) {
     message.value = 'Passwords do not match. Please try again.'
+    return
+  }
+
+  if (!passwordIsValid.value) {
+    message.value =
+      'Please choose a password that meets all of the requirements.'
     return
   }
 
@@ -209,6 +234,7 @@ const goToLogin = () => {
                   v-model="password"
                   :type="showPassword ? 'text' : 'password'"
                   placeholder="Create a password"
+                  maxlength="128"
                   required
                 />
 
@@ -258,6 +284,18 @@ const goToLogin = () => {
 
                 </button>
               </div>
+
+              <!-- Live password requirements -->
+              <ul class="password-rules">
+                <li
+                  v-for="check in passwordChecks"
+                  :key="check.label"
+                  :class="{ met: check.met }"
+                >
+                  {{ check.met ? '✓' : '○' }} {{ check.label }}
+                </li>
+              </ul>
+
             </div>
 
             <!-- Confirm password -->
@@ -690,6 +728,26 @@ const goToLogin = () => {
   color: #d26f3d;
 }
 
+/* =========================================
+   Password Requirements
+   ========================================= */
+
+.password-rules {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  color: #a0a0a0;
+  font-size: 12px;
+}
+
+
+.password-rules li.met {
+  color: #275b4f;
+  font-weight: 600;
+}
 
 /* =========================================
    Create Account Button

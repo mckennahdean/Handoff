@@ -14,6 +14,7 @@ from backend.auth_service import (
     get_current_user,
     get_user_by_email,
     invite_code_is_valid,
+    password_problems,
     regenerate_invite_code,
     require_owner,
 )
@@ -21,8 +22,6 @@ from backend.models import User
 
 
 router = APIRouter()
-
-MIN_PASSWORD_LENGTH = 8
 
 
 class SignupRequest(BaseModel):
@@ -83,13 +82,12 @@ def signup(request: SignupRequest):
             detail="A valid email address is required."
         )
 
-    if len(request.password) < MIN_PASSWORD_LENGTH:
+    problems = password_problems(request.password)
+
+    if problems:
         raise HTTPException(
             status_code=400,
-            detail=(
-                f"Password must be at least "
-                f"{MIN_PASSWORD_LENGTH} characters."
-            )
+            detail="Password must contain " + ", ".join(problems) + "."
         )
 
     is_first_account = count_users() == 0
