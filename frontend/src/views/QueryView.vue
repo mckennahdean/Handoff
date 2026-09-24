@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import { apiFetch } from '../api.js'
 
 const question = ref('')
 const hasAsked = ref(false)
@@ -22,7 +23,7 @@ const askHandoff = async () => {
   gapMessage.value = ''
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/query', {
+    const response = await apiFetch('/api/query', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

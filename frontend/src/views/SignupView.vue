@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { apiFetch, saveSession, errorMessage } from '../api.js'
 
 // Allows navigation between the login and sign-up screens.
 const router = useRouter()
@@ -8,14 +9,15 @@ const router = useRouter()
 // Stores the values entered into the sign-up form.
 const name = ref('')
 const business = ref('')
+const inviteCode = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 
-// Stores the type of Handoff account being created.
-// Employee is selected by default because Owner access
-// should eventually be controlled by the backend.
-const role = ref('employee')
+// True only when no accounts exist yet. The first account
+// becomes the Owner and names the business. Everyone after
+// that joins as an Employee using the Owner's invite code.
+const needsOwner = ref(false)
 
 // Controls whether the password fields are visible.
 const showPassword = ref(false)
@@ -24,32 +26,69 @@ const showConfirmPassword = ref(false)
 // Displays a message after the user takes an action.
 const message = ref('')
 
-// Handles account creation.
-const createAccount = () => {
-  // Make sure both password fields match.
+// Ask the backend whether this is the first account.
+onMounted(async () => {
+  try {
+    const response = await apiFetch('/api/auth/setup-status')
+    const data = await response.json()
+
+    needsOwner.value = data.needs_owner
+  } catch {
+    message.value = 'Unable to reach the Handoff server.'
+  }
+})
+
+// Handles account creation through the Handoff backend.
+const createAccount = async () => {
+  message.value = ''
+
   if (password.value !== confirmPassword.value) {
     message.value = 'Passwords do not match. Please try again.'
     return
   }
 
-  // Store the selected role for the frontend prototype.
-  // This will eventually be replaced by the authenticated
-  // user's role returned from the Handoff backend.
-  localStorage.setItem('userRole', role.value)
+  const body = {
+    name: name.value,
+    email: email.value,
+    password: password.value
+  }
 
-  // Store basic user information for the prototype.
-  localStorage.setItem(
-    'handoffUser',
-    JSON.stringify({
-      name: name.value,
-      business: business.value,
-      email: email.value,
-      role: role.value
+  if (needsOwner.value) {
+    body.business_name = business.value
+  } else {
+    body.invite_code = inviteCode.value
+  }
+
+  try {
+    const response = await apiFetch('/api/auth/signup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
     })
-  )
 
-  message.value =
-    'Account created successfully. Backend authentication will be connected later.'
+    const data = await response.json()
+
+    if (!response.ok) {
+      message.value = errorMessage(
+        data,
+        'Unable to create account. Please check the form.'
+      )
+      return
+    }
+
+    saveSession(data.access_token, data.user)
+
+    router.push(
+      data.user.role === 'owner'
+        ? '/owner-dashboard'
+        : '/employee-dashboard'
+    )
+  } catch {
+    message.value =
+      'Unable to reach the Handoff server. Please try again.'
+  }
 }
 
 // Returns the user to the login screen.
@@ -120,9 +159,9 @@ const goToLogin = () => {
               />
             </div>
 
-            <!-- Business or organization -->
-            <div class="form-group">
-              <label for="business">Business or Organization</label>
+            <!-- Business name: first account only (becomes the Owner) -->
+            <div v-if="needsOwner" class="form-group">
+              <label for="business">Business Name (you will be the Owner)</label>
 
               <input
                 id="business"
@@ -133,51 +172,18 @@ const goToLogin = () => {
               />
             </div>
 
-            <!-- Account type -->
-            <div class="form-group">
-              <label>Account Type</label>
+            <!-- Invite code: every account after the Owner -->
+            <div v-else class="form-group">
+              <label for="invite-code">Invite Code</label>
 
-              <div class="role-options">
-
-                <!-- Owner option -->
-                <label
-                  class="role-option"
-                  :class="{ selected: role === 'owner' }"
-                >
-                  <input
-                    v-model="role"
-                    type="radio"
-                    value="owner"
-                  />
-
-                  <div class="role-text">
-                    <span class="role-title">Owner</span>
-                    <span class="role-description">
-                      Manage procedures, approvals, and team knowledge
-                    </span>
-                  </div>
-                </label>
-
-                <!-- Employee option -->
-                <label
-                  class="role-option"
-                  :class="{ selected: role === 'employee' }"
-                >
-                  <input
-                    v-model="role"
-                    type="radio"
-                    value="employee"
-                  />
-
-                  <div class="role-text">
-                    <span class="role-title">Employee</span>
-                    <span class="role-description">
-                      Find and use approved business knowledge
-                    </span>
-                  </div>
-                </label>
-
-              </div>
+              <input
+                id="invite-code"
+                v-model="inviteCode"
+                type="text"
+                placeholder="8-character code from your manager"
+                maxlength="8"
+                required
+              />
             </div>
 
             <!-- Email -->

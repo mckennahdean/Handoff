@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { apiFetch } from '../api.js'
 
 const gaps = ref([])
 const selectedGap = ref(null)
@@ -43,8 +44,8 @@ const loadGaps = async () => {
   errorMessage.value = ''
 
   try {
-    const response = await fetch(
-      'http://127.0.0.1:8000/api/gaps'
+    const response = await apiFetch(
+      '/api/gaps'
     )
 
     const data = await response.json()

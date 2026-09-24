@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { apiFetch } from '../api.js'
 
 const router = useRouter()
 
@@ -236,8 +237,8 @@ const uploadAudio = async (audioFile) => {
     audioFile
   )
 
-  const response = await fetch(
-    'http://127.0.0.1:8000/api/upload-audio',
+  const response = await apiFetch(
+    '/api/upload-audio',
     {
       method: 'POST',
       body: formData
@@ -263,8 +264,8 @@ const uploadAudio = async (audioFile) => {
 }
 
 const structureKnowledge = async (text) => {
-  const response = await fetch(
-    'http://127.0.0.1:8000/api/structure-procedure',
+  const response = await apiFetch(
+    '/api/structure-procedure',
     {
       method: 'POST',
       headers: {

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { apiFetch } from '../api.js'
 
 const router = useRouter()
 
@@ -146,8 +147,8 @@ const approveProcedure = async () => {
   isSubmitting.value = true
 
   try {
-    const response = await fetch(
-      'http://127.0.0.1:8000/api/approve-procedure',
+    const response = await apiFetch(
+      '/api/approve-procedure',
       {
         method: 'POST',
         headers: {

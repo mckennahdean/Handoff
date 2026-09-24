@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { apiFetch, saveSession, errorMessage } from '../api.js'
 
 // Allows navigation between pages.
 const router = useRouter()
@@ -15,35 +16,39 @@ const showPassword = ref(false)
 // Displays a message after the user takes an action.
 const message = ref('')
 
-// Handles sign-in for the frontend prototype.
-const signIn = () => {
-  // Check whether a prototype account exists.
-  const storedUser = localStorage.getItem('handoffUser')
+// Signs the user in through the Handoff backend.
+const signIn = async () => {
+  message.value = ''
 
-  if (!storedUser) {
+  try {
+    const response = await apiFetch('/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value
+      })
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      message.value = errorMessage(data, 'Unable to sign in.')
+      return
+    }
+
+    saveSession(data.access_token, data.user)
+
+    router.push(
+      data.user.role === 'owner'
+        ? '/owner-dashboard'
+        : '/employee-dashboard'
+    )
+  } catch {
     message.value =
-      'No account found. Please create an account first.'
-    return
-  }
-
-  // Retrieve the stored account information.
-  const user = JSON.parse(storedUser)
-
-  // Make sure the email matches the account.
-  if (email.value !== user.email) {
-    message.value =
-      'The email address does not match the prototype account.'
-    return
-  }
-
-  // Retrieve the user's role.
-  const role = localStorage.getItem('userRole')
-
-  // Send the user to the appropriate dashboard.
-  if (role === 'owner') {
-    router.push('/owner-dashboard')
-  } else {
-    router.push('/employee-dashboard')
+      'Unable to reach the Handoff server. Please try again.'
   }
 }
 

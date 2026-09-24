@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { apiFetch } from '../api.js'
 
 const router = useRouter()
 
@@ -72,8 +73,8 @@ const loadProcedures = async () => {
   errorMessage.value = ''
 
   try {
-    const response = await fetch(
-      'http://127.0.0.1:8000/api/procedures'
+    const response = await apiFetch(
+      '/api/procedures'
     )
 
     const data = await response.json()
