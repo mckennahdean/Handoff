@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
+from google.genai import errors
 
 import backend.gemini_service as gemini_service
 import backend.main as main_module
@@ -202,3 +203,53 @@ def test_merge_endpoint_returns_502_when_ai_alters_steps(monkeypatch):
     )
 
     assert response.status_code == 502
+
+    # ---------- Retry on temporary failures ----------
+
+def test_generate_retries_temporary_errors(monkeypatch):
+    calls = {"count": 0}
+
+    def flaky_generate(**kwargs):
+        calls["count"] += 1
+
+        if calls["count"] < 3:
+            raise errors.ServerError(503, {"error": {"message": "busy"}})
+
+        return SimpleNamespace(text="ok")
+
+    monkeypatch.setattr(
+        gemini_service,
+        "get_client",
+        lambda: SimpleNamespace(
+            models=SimpleNamespace(generate_content=flaky_generate)
+        )
+    )
+
+    # Skip the real waiting so the test runs instantly.
+    monkeypatch.setattr(gemini_service.time, "sleep", lambda seconds: None)
+
+    result = gemini_service._generate(model="test", contents="test")
+
+    assert result.text == "ok"
+    assert calls["count"] == 3
+
+
+def test_generate_does_not_retry_bad_requests(monkeypatch):
+    calls = {"count": 0}
+
+    def bad_request(**kwargs):
+        calls["count"] += 1
+        raise errors.ClientError(400, {"error": {"message": "bad"}})
+
+    monkeypatch.setattr(
+        gemini_service,
+        "get_client",
+        lambda: SimpleNamespace(
+            models=SimpleNamespace(generate_content=bad_request)
+        )
+    )
+
+    with pytest.raises(errors.ClientError):
+        gemini_service._generate(model="test", contents="test")
+
+    assert calls["count"] == 1

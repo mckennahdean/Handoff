@@ -395,7 +395,8 @@ const submitProcedure = async () => {
         title: title.value.trim() || structuredProcedure.title,
         steps: structuredProcedure.steps || [],
         warnings: structuredProcedure.warnings || [],
-        capture_method: captureMethod.value
+        capture_method: captureMethod.value,
+        gap_questions: structuredProcedure.gap_questions || []
       })
     })
 

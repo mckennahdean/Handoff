@@ -1,10 +1,12 @@
 import os
 import json
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from google.genai import errors
 
 
 load_dotenv()
@@ -14,6 +16,10 @@ TEXT_MODEL = "gemini-3.6-flash"
 
 # Owners never face more than this many follow-up questions.
 MAX_GAP_QUESTIONS = 5
+
+# For unavailable error message 5xx from Google
+# This will automatically retry 3 times before failing.
+MAX_ATTEMPTS = 3
 
 client = None
 
@@ -39,6 +45,27 @@ def get_client():
 
     return client
 
+def _is_transient(error) -> bool:
+    # 5xx means Google had a temporary problem; 429 means we were
+    # rate limited. Both usually succeed on retry. Other 4xx errors
+    # mean our request was wrong, so retrying would not help.
+    return (
+        isinstance(error, errors.ServerError)
+        or getattr(error, "code", None) == 429
+    )
+
+
+def _generate(**kwargs):
+    """Call Gemini, retrying temporary failures with exponential backoff."""
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            return get_client().models.generate_content(**kwargs)
+
+        except errors.APIError as error:
+            if attempt == MAX_ATTEMPTS or not _is_transient(error):
+                raise
+
+            time.sleep(2 ** (attempt - 1))  # wait 1s, then 2s
 
 def _json_config(temperature=None):
     # JSON mode forces Gemini to return valid JSON, so responses
@@ -75,9 +102,8 @@ def _keeps_original_items(original: list, updated: list) -> bool:
 
 
 def structure_procedure(text: str):
-    gemini_client = get_client()
 
-    response = gemini_client.models.generate_content(
+    response = _generate(
         model=TEXT_MODEL,
         config=_json_config(),
         contents=f"""
@@ -135,7 +161,6 @@ def merge_gap_answers(
     Insert-only: existing steps and warnings must come back
     word for word, or the merge is rejected.
     """
-    gemini_client = get_client()
 
     steps = [step for step in steps if step.strip()]
     warnings = [warning for warning in warnings if warning.strip()]
@@ -145,7 +170,7 @@ def merge_gap_answers(
         for gap in answered_gaps
     )
 
-    response = gemini_client.models.generate_content(
+    response = _generate(
         model=TEXT_MODEL,
         config=_json_config(temperature=0),
         contents=f"""
@@ -204,7 +229,6 @@ def answer_question_from_procedure(
     question: str,
     procedure
 ):
-    gemini_client = get_client()
 
     procedure_text = (
         f"Title: {procedure.title}\n"
@@ -212,7 +236,7 @@ def answer_question_from_procedure(
         f"Warnings: {procedure.warnings}"
     )
 
-    response = gemini_client.models.generate_content(
+    response = _generate(
         model=TEXT_MODEL,
         contents=f"""
 You are answering an employee question using ONLY the procedure below.
@@ -236,7 +260,7 @@ Employee question:
 def transcribe_audio(file_path: str):
     gemini_client = get_client()
 
-    audio_file = gemini_client.files.upload(
+    audio_file = _generate(
         file=Path(file_path)
     )
 
