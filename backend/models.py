@@ -101,7 +101,7 @@ class User(Base):
         default=lambda: datetime.now(timezone.utc)
     )
 
-    class Business(Base):
+class Business(Base):
     __tablename__ = "business"
 
     id: Mapped[int] = mapped_column(primary_key=True)
