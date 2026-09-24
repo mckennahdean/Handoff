@@ -10,6 +10,9 @@ from sqlalchemy import select
 from backend.database import engine
 from backend.models import Procedure, Gap
 
+from datetime import datetime, timezone
+from typing import Optional
+
 
 load_dotenv()
 
@@ -18,7 +21,7 @@ client = genai.Client(
 )
 
 
-def save_procedure(procedure_data: dict):
+def create_embedding(procedure_data: dict) -> list:
     text_for_embedding = (
         procedure_data["title"]
         + " "
@@ -32,15 +35,21 @@ def save_procedure(procedure_data: dict):
         contents=text_for_embedding
     )
 
-    embedding = embedding_response.embeddings[0].values
+    return embedding_response.embeddings[0].values
 
+
+def save_draft(procedure_data: dict):
+    """Store an AI-structured procedure awaiting owner approval.
+
+    Drafts have no embedding, so retrieval can never return them.
+    """
     with Session(engine) as session:
         procedure = Procedure(
             title=procedure_data["title"],
             steps=json.dumps(procedure_data["steps"]),
             warnings=json.dumps(procedure_data["warnings"]),
-            embedding=embedding,
-            status="approved"
+            capture_method=procedure_data.get("capture_method"),
+            status="pending"
         )
 
         session.add(procedure)
@@ -50,16 +59,88 @@ def save_procedure(procedure_data: dict):
         return procedure
 
 
-def get_procedures():
+def save_procedure(
+    procedure_data: dict,
+    procedure_id: Optional[int] = None
+):
+    """Approve a procedure: embed it and mark it approved.
+
+    With a procedure_id, approves that draft, or re-approves an
+    edited procedure and increments its version. Without one,
+    creates and approves a new procedure in one step.
+    Returns None if the procedure_id does not exist.
+    """
     with Session(engine) as session:
-        procedures = session.query(Procedure).all()
+        if procedure_id is None:
+            procedure = Procedure()
+            session.add(procedure)
+
+        else:
+            procedure = session.get(Procedure, procedure_id)
+
+            if procedure is None:
+                return None
+
+            if procedure.status == "approved":
+                procedure.version += 1
+
+        procedure.title = procedure_data["title"]
+        procedure.steps = json.dumps(procedure_data["steps"])
+        procedure.warnings = json.dumps(procedure_data["warnings"])
+        procedure.embedding = create_embedding(procedure_data)
+        procedure.status = "approved"
+        procedure.last_confirmed = datetime.now(timezone.utc)
+
+        session.commit()
+        session.refresh(procedure)
+
+        return procedure
+
+
+def get_procedure(procedure_id: int):
+    with Session(engine) as session:
+        return session.get(Procedure, procedure_id)
+
+
+def procedure_to_dict(procedure) -> dict:
+    return {
+        "id": procedure.id,
+        "title": procedure.title,
+        "steps": json.loads(procedure.steps),
+        "warnings": json.loads(procedure.warnings),
+        "status": procedure.status,
+        "version": procedure.version,
+        "capture_method": procedure.capture_method,
+        "last_confirmed": (
+            procedure.last_confirmed
+            if procedure.status == "approved"
+            else None
+        )
+    }
+
+
+def get_procedures(include_pending: bool = True):
+    with Session(engine) as session:
+        query = select(Procedure).order_by(
+            Procedure.last_confirmed.desc()
+        )
+
+        if not include_pending:
+            query = query.where(Procedure.status == "approved")
+
+        procedures = session.scalars(query).all()
 
         return [
             {
                 "id": procedure.id,
                 "title": procedure.title,
                 "status": procedure.status,
-                "last_confirmed": procedure.last_confirmed
+                "version": procedure.version,
+                "last_confirmed": (
+                    procedure.last_confirmed
+                    if procedure.status == "approved"
+                    else None
+                )
             }
             for procedure in procedures
         ]

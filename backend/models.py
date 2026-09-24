@@ -4,6 +4,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import String, Text, DateTime, Float, Integer
 
 from pgvector.sqlalchemy import Vector
+from typing import Optional
 
 
 class Base(DeclarativeBase):
@@ -27,8 +28,11 @@ class Procedure(Base):
         Text
     )
 
-    embedding: Mapped[list] = mapped_column(
-        Vector(3072)
+    # Nullable because pending drafts have no embedding yet.
+    # The embedding is generated only when the owner approves.
+    embedding: Mapped[Optional[list]] = mapped_column(
+        Vector(3072),
+        nullable=True
     )
 
     status: Mapped[str] = mapped_column(
@@ -44,6 +48,11 @@ class Procedure(Base):
     last_confirmed: Mapped[datetime] = mapped_column(
         DateTime,
         default=lambda: datetime.now(timezone.utc)
+    )
+
+    capture_method: Mapped[Optional[str]] = mapped_column(
+        String(20),
+        nullable=True
     )
 
 

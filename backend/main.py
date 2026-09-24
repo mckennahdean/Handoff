@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 
+
 from fastapi import (
     FastAPI,
     UploadFile,
@@ -11,10 +12,13 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 from backend.db_service import (
     get_procedures,
+    get_procedure,
+    procedure_to_dict,
+    save_draft,
     save_procedure,
     find_best_matching_procedure,
     log_gap,
@@ -29,6 +33,7 @@ from backend.gemini_service import (
 
 from backend.auth_routes import router as auth_router
 from backend.auth_service import get_current_user, require_owner
+from backend.models import User
 
 app = FastAPI()
 
@@ -76,9 +81,16 @@ class ProcedureResponse(BaseModel):
 
 
 class ApprovedProcedure(BaseModel):
+    procedure_id: Optional[int] = None
     title: str
     steps: List[str]
     warnings: List[str]
+
+class DraftProcedure(BaseModel):
+    title: str
+    steps: List[str]
+    warnings: List[str]
+    capture_method: Optional[str] = None
 
 
 @app.get("/")
@@ -213,10 +225,15 @@ def create_structure(
         )
 
 
-@app.get("/api/procedures", dependencies=[Depends(get_current_user)])
-def list_procedures():
+@app.get("/api/procedures")
+def list_procedures(
+    user: User = Depends(get_current_user)
+):
     try:
-        return get_procedures()
+        # Employees only ever see approved procedures.
+        return get_procedures(
+            include_pending=user.role == "owner"
+        )
 
     except Exception as error:
         print(
@@ -229,6 +246,73 @@ def list_procedures():
             detail="Database error."
         )
 
+
+@app.get("/api/procedures/{procedure_id}")
+def get_procedure_detail(
+    procedure_id: int,
+    user: User = Depends(get_current_user)
+):
+    try:
+        procedure = get_procedure(procedure_id)
+
+    except Exception as error:
+        print(
+            "Database error:",
+            error
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Database error."
+        )
+
+    # Employees get 404 for drafts, not 403, so the response
+    # does not reveal that an unapproved draft exists.
+    if (
+        procedure is None
+        or (
+            procedure.status != "approved"
+            and user.role != "owner"
+        )
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="Procedure not found."
+        )
+
+    return procedure_to_dict(procedure)
+
+
+@app.post(
+    "/api/procedures/drafts",
+    status_code=201,
+    dependencies=[Depends(require_owner)]
+)
+def create_draft(draft: DraftProcedure):
+    if not draft.title.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Procedure title cannot be empty."
+        )
+
+    try:
+        saved = save_draft(draft.model_dump())
+
+    except Exception as error:
+        print(
+            "Draft save error:",
+            error
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Database error."
+        )
+
+    return {
+        "procedure_id": saved.id,
+        "status": saved.status
+    }
 
 @app.get("/api/gaps", dependencies=[Depends(require_owner)])
 def list_gaps():
@@ -265,15 +349,9 @@ def approve_procedure(
 
     try:
         saved = save_procedure(
-            procedure.model_dump()
+            procedure.model_dump(exclude={"procedure_id"}),
+            procedure.procedure_id
         )
-
-        return {
-            "status": "approved",
-            "procedure_id": saved.id,
-            "title": saved.title,
-            "last_confirmed": saved.last_confirmed
-        }
 
     except Exception as error:
         print(
@@ -285,6 +363,20 @@ def approve_procedure(
             status_code=500,
             detail="Database or embedding service error."
         )
+
+    if saved is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Procedure not found."
+        )
+
+    return {
+        "status": "approved",
+        "procedure_id": saved.id,
+        "title": saved.title,
+        "version": saved.version,
+        "last_confirmed": saved.last_confirmed
+    }
 
 
 @app.post("/api/query", dependencies=[Depends(get_current_user)])

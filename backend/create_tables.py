@@ -10,4 +10,17 @@ if __name__ == "__main__":
 
     Base.metadata.create_all(engine)
 
+    # Lightweight migrations for databases created before these
+    # columns changed. Each statement is safe to run repeatedly.
+    with engine.connect() as conn:
+        conn.execute(text(
+            "ALTER TABLE procedures "
+            "ALTER COLUMN embedding DROP NOT NULL;"
+        ))
+        conn.execute(text(
+            "ALTER TABLE procedures "
+            "ADD COLUMN IF NOT EXISTS capture_method VARCHAR(20);"
+        ))
+        conn.commit()
+
     print("Database tables created.")
