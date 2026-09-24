@@ -1,66 +1,70 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { apiFetch } from '../api.js'
 
+const route = useRoute()
 const router = useRouter()
 
-const storedProcedure = localStorage.getItem('pendingProcedure')
+// The procedure under review, identified by ?id= in the URL.
+const procedureId = Number(route.query.id)
 
-const pendingProcedure = storedProcedure
-  ? JSON.parse(storedProcedure)
-  : null
-
-const title = ref(
-  pendingProcedure?.title || 'Customer Returns'
-)
+const title = ref('')
+const steps = ref([])
+const warnings = ref([])
+const captureMethod = ref(null)
+const status = ref('')
+const version = ref(1)
+const isLoading = ref(true)
+const loadError = ref('')
 
 const captureDescription = computed(() => {
-  if (pendingProcedure?.captureMethod === 'upload') {
-    return `Captured using Uploaded audio${
-      pendingProcedure.audioFileName
-        ? ` — ${pendingProcedure.audioFileName}`
-        : ''
-    }`
+  if (captureMethod.value === 'upload') {
+    return 'Captured using uploaded audio'
   }
 
-  if (pendingProcedure?.captureMethod === 'manual') {
-    return 'Captured using Manual knowledge entry'
+  if (captureMethod.value === 'manual') {
+    return 'Captured using manual knowledge entry'
   }
 
-  if (pendingProcedure?.captureMethod === 'record') {
-    const duration = pendingProcedure.recordingDuration
-
-    if (duration) {
-      return `Captured using Owner recording — ${duration}`
-    }
-
+  if (captureMethod.value === 'record') {
     return 'Captured using Owner recording'
   }
 
-  return 'Captured using Owner recording'
+  return 'Capture method not recorded'
 })
 
-const steps = ref(
-  Array.isArray(pendingProcedure?.steps) &&
-  pendingProcedure.steps.length > 0
-    ? [...pendingProcedure.steps]
-    : [
-        'Verify the customer and original purchase information.',
-        'Confirm that the item meets the return requirements.',
-        'Process the return using the approved return method.',
-        'Provide the customer with the appropriate confirmation.'
-      ]
-)
+// Load the procedure from the database, so the review page shows
+// the real content even after a refresh or a browser restart.
+const loadProcedure = async () => {
+  if (!procedureId) {
+    loadError.value =
+      'No procedure selected. Open one from the Procedures page.'
+    isLoading.value = false
+    return
+  }
 
-const warnings = ref(
-  Array.isArray(pendingProcedure?.warnings)
-    ? [...pendingProcedure.warnings]
-    : [
-        'Items outside the return policy require Owner review.',
-        'Refunds should not be issued until the return requirements are verified.'
-      ]
-)
+  try {
+    const response = await apiFetch(`/api/procedures/${procedureId}`)
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.detail || 'Unable to load procedure.')
+    }
+
+    title.value = data.title
+    steps.value = [...data.steps]
+    warnings.value = [...data.warnings]
+    captureMethod.value = data.capture_method
+    status.value = data.status
+    version.value = data.version
+    approvedLastConfirmed.value = data.last_confirmed
+  } catch (error) {
+    loadError.value = error.message || 'Unable to load procedure.'
+  } finally {
+    isLoading.value = false
+  }
+}
 
 const showChangesModal = ref(false)
 const changesComment = ref('')
@@ -155,6 +159,7 @@ const approveProcedure = async () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          procedure_id: procedureId,
           title: cleanTitle,
           steps: cleanSteps,
           warnings: cleanWarnings
@@ -176,7 +181,8 @@ const approveProcedure = async () => {
     approvedLastConfirmed.value =
       data.last_confirmed || null
 
-    localStorage.removeItem('pendingProcedure')
+    status.value = 'approved'
+    version.value = data.version
 
     message.value = 'Procedure approved successfully.'
   } catch (error) {
@@ -221,6 +227,7 @@ const formattedLastConfirmed = computed(() => {
     day: 'numeric'
   })
 })
+onMounted(loadProcedure)
 </script>
 
 <template>
@@ -307,7 +314,32 @@ const formattedLastConfirmed = computed(() => {
       </div>
     </section>
 
-    <section class="procedure-card">
+    <section
+      v-if="isLoading"
+      class="success-message"
+    >
+      <div>
+        <strong>Loading procedure...</strong>
+      </div>
+    </section>
+
+    <section
+      v-if="loadError"
+      class="error-message"
+    >
+      <span class="error-icon">!</span>
+
+      <div>
+        <strong>Unable to load procedure</strong>
+
+        <p>{{ loadError }}</p>
+      </div>
+    </section>
+
+    <section
+      v-if="!isLoading && !loadError"
+      class="procedure-card"
+    >
 
       <div class="procedure-header">
         <div>
@@ -324,7 +356,7 @@ const formattedLastConfirmed = computed(() => {
 
         <div class="version">
           <span>Version</span>
-          <strong>1.0</strong>
+          <strong>{{ version }}.0</strong>
         </div>
       </div>
 
@@ -452,7 +484,7 @@ const formattedLastConfirmed = computed(() => {
 
           <strong>
             {{
-              isApproved
+              isApproved || status === 'approved'
                 ? 'Available to employees'
                 : 'Owner review required'
             }}
@@ -494,7 +526,9 @@ const formattedLastConfirmed = computed(() => {
             {{
               isSubmitting
                 ? 'Approving...'
-                : 'Approve Procedure'
+                : status === 'approved'
+                  ? 'Approve Changes'
+                  : 'Approve Procedure'
             }}
           </button>
 

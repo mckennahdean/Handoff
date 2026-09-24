@@ -12,11 +12,7 @@ const user = getCurrentUser() || { name: 'Owner' }
 const procedureCount = ref('...')
 const documentationGaps = ref('...')
 
-// Unapproved drafts currently live only in this browser.
-// This becomes a real server-side count in the next step.
-const pendingReviews = ref(
-  localStorage.getItem('pendingProcedure') ? 1 : 0
-)
+const pendingReviews = ref('...')
 
 // Invite code the owner shares with new employees.
 const businessName = ref('')
@@ -32,7 +28,15 @@ const loadStats = async () => {
     ])
 
     if (proceduresResponse.ok) {
-      procedureCount.value = (await proceduresResponse.json()).length
+      const procedures = await proceduresResponse.json()
+
+      procedureCount.value = procedures.filter(
+        (procedure) => procedure.status === 'approved'
+      ).length
+
+      pendingReviews.value = procedures.filter(
+        (procedure) => procedure.status === 'pending'
+      ).length
     }
 
     if (gapsResponse.ok) {
@@ -150,7 +154,7 @@ const goTo = (path) => {
       <!-- Reviews -->
       <button
         class="stat-card"
-        @click="goTo('/procedure-review')"
+        @click="goTo('/procedures')"
       >
         <span class="stat-label">Pending Reviews</span>
         <strong>{{ pendingReviews }}</strong>
@@ -251,7 +255,7 @@ const goTo = (path) => {
         <!-- Review -->
         <button
           class="action-card"
-          @click="goTo('/procedure-review')"
+          @click="goTo('/procedures')"
         >
           <div class="action-icon">
             ✓

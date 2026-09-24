@@ -312,7 +312,6 @@ const submitProcedure = async () => {
 
   try {
     let knowledgeText = ''
-    let audioFileName = null
 
     // -----------------------------------------
     // Manual Entry
@@ -330,10 +329,6 @@ const submitProcedure = async () => {
     if (captureMethod.value === 'upload') {
       message.value =
         'Transcribing uploaded audio...'
-
-      audioFileName =
-        selectedFile.value.name
-
       knowledgeText =
         await uploadAudio(
           selectedFile.value
@@ -375,9 +370,6 @@ const submitProcedure = async () => {
           }
         )
 
-      audioFileName =
-        recordedFile.name
-
       knowledgeText =
         await uploadAudio(
           recordedFile
@@ -392,41 +384,36 @@ const submitProcedure = async () => {
         knowledgeText
       )
 
-    const pendingProcedure = {
-      title: title.value.trim(),
-      aiSuggestedTitle:
-        structuredProcedure.title,
-      captureMethod:
-        captureMethod.value,
-      manualNotes:
-        manualNotes.value.trim(),
-      transcript:
-        knowledgeText,
-      audioFileName,
-      recordingDuration:
-        captureMethod.value === 'record'
-          ? formattedTime()
-          : null,
-      steps:
-        structuredProcedure.steps || [],
-      warnings:
-        structuredProcedure.warnings || [],
-      status: 'Pending Review'
-    }
+    // Save the AI-structured result as a pending draft in the
+    // database. Nothing becomes searchable until the owner approves.
+    const draftResponse = await apiFetch('/api/procedures/drafts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: title.value.trim() || structuredProcedure.title,
+        steps: structuredProcedure.steps || [],
+        warnings: structuredProcedure.warnings || [],
+        capture_method: captureMethod.value
+      })
+    })
 
-    localStorage.setItem(
-      'pendingProcedure',
-      JSON.stringify(
-        pendingProcedure
+    const draft = await draftResponse.json()
+
+    if (!draftResponse.ok) {
+      throw new Error(
+        draft.detail || 'Unable to save the draft procedure.'
       )
-    )
+    }
 
     message.value =
       'Knowledge structured successfully. Opening Owner review...'
 
-    router.push(
-      '/procedure-review'
-    )
+    router.push({
+      path: '/procedure-review',
+      query: { id: draft.procedure_id }
+    })
   } catch (error) {
     console.error(error)
 
