@@ -71,3 +71,51 @@ class Gap(Base):
         DateTime,
         default=lambda: datetime.now(timezone.utc)
     )
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    name: Mapped[str] = mapped_column(
+        String(100)
+    )
+
+    email: Mapped[str] = mapped_column(
+        String(255),
+        unique=True,
+        index=True
+    )
+
+    password_hash: Mapped[str] = mapped_column(
+        String(255)
+    )
+
+    role: Mapped[str] = mapped_column(
+        String(20)
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc)
+    )
+
+    class Business(Base):
+    __tablename__ = "business"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    name: Mapped[str] = mapped_column(
+        String(200)
+    )
+
+    invite_code: Mapped[str] = mapped_column(
+        String(20),
+        unique=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc)
+    )
