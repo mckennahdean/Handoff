@@ -6,7 +6,8 @@ from fastapi import (
     FastAPI,
     UploadFile,
     File,
-    HTTPException
+    HTTPException,
+    Depends
 )
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -27,6 +28,7 @@ from backend.gemini_service import (
 )
 
 from backend.auth_routes import router as auth_router
+from backend.auth_service import get_current_user, require_owner
 
 app = FastAPI()
 
@@ -86,7 +88,7 @@ def home():
     }
 
 
-@app.post("/api/upload-audio")
+@app.post("/api/upload-audio", dependencies=[Depends(require_owner)])
 def upload_audio(
     audio_file: UploadFile = File(...)
 ):
@@ -211,7 +213,7 @@ def create_structure(
         )
 
 
-@app.get("/api/procedures")
+@app.get("/api/procedures", dependencies=[Depends(get_current_user)])
 def list_procedures():
     try:
         return get_procedures()
@@ -228,7 +230,7 @@ def list_procedures():
         )
 
 
-@app.get("/api/gaps")
+@app.get("/api/gaps", dependencies=[Depends(require_owner)])
 def list_gaps():
     try:
         return get_gaps()
@@ -245,7 +247,7 @@ def list_gaps():
         )
 
 
-@app.post("/api/approve-procedure")
+@app.post("/api/approve-procedure", dependencies=[Depends(require_owner)])
 def approve_procedure(
     procedure: ApprovedProcedure
 ):
@@ -285,7 +287,7 @@ def approve_procedure(
         )
 
 
-@app.post("/api/query")
+@app.post("/api/query", dependencies=[Depends(get_current_user)])
 def query_procedure(
     request: QueryRequest
 ):

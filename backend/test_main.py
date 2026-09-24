@@ -1,10 +1,27 @@
 from types import SimpleNamespace
 from fastapi.testclient import TestClient
+from backend.auth_service import get_current_user
 
 import backend.main as main_module
-
+import pytest
 
 client = TestClient(main_module.app)
+
+FAKE_OWNER = SimpleNamespace(
+    id=1,
+    name="Test Owner",
+    email="owner@test.com",
+    role="owner"
+)
+
+
+@pytest.fixture(autouse=True)
+def logged_in_as_owner():
+    main_module.app.dependency_overrides[get_current_user] = (
+        lambda: FAKE_OWNER
+    )
+    yield
+    main_module.app.dependency_overrides.clear()
 
 
 def test_home():
