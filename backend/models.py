@@ -55,6 +55,13 @@ class Procedure(Base):
         nullable=True
     )
 
+    # JSON list of the AI's follow-up questions, kept as a
+    # record of what the owner was asked before approval.
+    gap_questions: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True
+    )
+
 
 class Gap(Base):
     __tablename__ = "gaps"

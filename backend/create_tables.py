@@ -21,6 +21,10 @@ if __name__ == "__main__":
             "ALTER TABLE procedures "
             "ADD COLUMN IF NOT EXISTS capture_method VARCHAR(20);"
         ))
+        conn.execute(text(
+            "ALTER TABLE procedures "
+            "ADD COLUMN IF NOT EXISTS gap_questions TEXT;"
+        ))
         conn.commit()
 
     print("Database tables created.")

@@ -246,6 +246,7 @@ def fake_procedure(status):
         status=status,
         version=1,
         capture_method="manual",
+        gap_questions='["What if the customer has no receipt?"]',
         last_confirmed="2026-09-24T12:00:00"
     )
 
@@ -266,6 +267,9 @@ def test_owner_can_view_pending_draft(monkeypatch):
     assert data["status"] == "pending"
     assert data["steps"] == ["Step one."]
     assert data["last_confirmed"] is None
+    assert data["gap_questions"] == [
+        "What if the customer has no receipt?"
+    ]
 
 
 def test_employee_cannot_view_pending_draft(monkeypatch):

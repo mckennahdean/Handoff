@@ -49,6 +49,9 @@ def save_draft(procedure_data: dict):
             steps=json.dumps(procedure_data["steps"]),
             warnings=json.dumps(procedure_data["warnings"]),
             capture_method=procedure_data.get("capture_method"),
+            gap_questions=json.dumps(
+                procedure_data.get("gap_questions", [])
+            ),
             status="pending"
         )
 
@@ -111,6 +114,11 @@ def procedure_to_dict(procedure) -> dict:
         "status": procedure.status,
         "version": procedure.version,
         "capture_method": procedure.capture_method,
+        "gap_questions": (
+            json.loads(procedure.gap_questions)
+            if procedure.gap_questions
+            else []
+        ),
         "last_confirmed": (
             procedure.last_confirmed
             if procedure.status == "approved"

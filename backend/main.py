@@ -27,6 +27,8 @@ from backend.db_service import (
 
 from backend.gemini_service import (
     structure_procedure,
+    merge_gap_answers,
+    MergeAlteredContentError,
     answer_question_from_procedure,
     transcribe_audio
 )
@@ -78,6 +80,7 @@ class ProcedureResponse(BaseModel):
     title: str
     steps: List[str]
     warnings: List[str]
+    gap_questions: List[str] = []
 
 
 class ApprovedProcedure(BaseModel):
@@ -91,6 +94,18 @@ class DraftProcedure(BaseModel):
     steps: List[str]
     warnings: List[str]
     capture_method: Optional[str] = None
+    gap_questions: List[str] = []
+
+class GapAnswer(BaseModel):
+    question: str
+    answer: str
+
+
+class MergeRequest(BaseModel):
+    title: str
+    steps: List[str]
+    warnings: List[str]
+    answers: List[GapAnswer]
 
 
 @app.get("/")
@@ -313,6 +328,52 @@ def create_draft(draft: DraftProcedure):
         "procedure_id": saved.id,
         "status": saved.status
     }
+
+@app.post(
+    "/api/procedures/merge-answers",
+    dependencies=[Depends(require_owner)]
+)
+def merge_answers(request: MergeRequest):
+    answered = [
+        answer.model_dump()
+        for answer in request.answers
+        if answer.answer.strip()
+    ]
+
+    if not answered:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide at least one answer to incorporate."
+        )
+
+    try:
+        return merge_gap_answers(
+            request.title,
+            request.steps,
+            request.warnings,
+            answered
+        )
+
+    except MergeAlteredContentError:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Handoff's AI tried to change your existing steps, "
+                "so the merge was cancelled. Try again, or choose "
+                "I'll Add It Myself."
+            )
+        )
+
+    except Exception as error:
+        print(
+            "Merge error:",
+            error
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="LLM service error."
+        )
 
 @app.get("/api/gaps", dependencies=[Depends(require_owner)])
 def list_gaps():
