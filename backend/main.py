@@ -26,6 +26,7 @@ from backend.gemini_service import (
     transcribe_audio
 )
 
+from backend.auth_routes import router as auth_router
 
 app = FastAPI()
 
@@ -42,6 +43,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
 
 # Audio upload settings
 SUPPORTED_AUDIO_EXTENSIONS = {
