@@ -195,7 +195,7 @@ onMounted(loadGaps)
       v-if="isLoading"
       class="status-message"
     >
-      <strong>Loading documentation gaps...</strong>
+      <strong>Loading knowledge gaps...</strong>
 
       <p>
         Handoff is retrieving unanswered employee questions.
@@ -214,7 +214,7 @@ onMounted(loadGaps)
       </div>
 
       <div>
-        <strong>Unable to load documentation gaps</strong>
+        <strong>Unable to load knowledge gaps</strong>
 
         <p>
           {{ errorMessage }}
@@ -292,14 +292,14 @@ onMounted(loadGaps)
 
         <div>
           <strong>
-            Why documentation gaps matter
+            Why knowledge gaps matter
           </strong>
 
           <p>
             Handoff is designed to avoid guessing when approved
             knowledge does not contain enough information to answer
-            a question. These gaps help Owners identify processes
-            that should be documented.
+            a question. These gaps show Owners which procedures
+            employees need most, so they know what to record next.
           </p>
         </div>
 
@@ -320,7 +320,7 @@ onMounted(loadGaps)
             id="gap-search"
             v-model="searchQuery"
             type="search"
-            placeholder="Search documentation gaps..."
+            placeholder="Search knowledge gaps..."
           />
 
         </div>
@@ -374,7 +374,7 @@ onMounted(loadGaps)
           </div>
 
           <h2>
-            No documentation gaps found
+            No knowledge gaps found
           </h2>
 
           <p>
