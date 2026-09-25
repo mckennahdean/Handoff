@@ -123,6 +123,17 @@ def test_guardrail_rejects_reordered_steps():
         ["Refund the customer.", "Check the receipt."]
     )
 
+def test_first_missing_item_names_the_reworded_step():
+    original = ["Count the till.", "Unlock the front door."]
+    updated = [
+        "Count the till using the till sheet.",
+        "Unlock the front door."
+    ]
+
+    assert gemini_service._first_missing_item(
+        original, updated
+    ) == "Count the till."
+
 
 def test_merge_adds_answers_without_changing_steps(monkeypatch):
     use_fake_gemini(monkeypatch, {

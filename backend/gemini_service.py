@@ -108,18 +108,25 @@ def _clean_list(value) -> list:
     ]
 
 
+def _first_missing_item(original: list, updated: list):
+    """Return the first original item that did not come back
+    unchanged and in order, or None if every item was kept."""
+    remaining = iter(item.strip() for item in updated)
+
+    for item in original:
+        if item.strip() not in remaining:
+            return item
+
+    return None
+
+
 def _keeps_original_items(original: list, updated: list) -> bool:
     """True if every original item still appears unchanged, in order.
 
     New items may be inserted anywhere, but nothing the owner
     wrote may be reworded, removed, or reordered.
     """
-    remaining = iter(item.strip() for item in updated)
-
-    return all(
-        item.strip() in remaining
-        for item in original
-    )
+    return _first_missing_item(original, updated) is None
 
 
 def structure_procedure(text: str):
@@ -204,6 +211,10 @@ Rules:
   (for exceptions and cautions).
 - Use ONLY the owner's answers. Do not invent information.
 - Do not ask questions.
+- If an answer adds detail to an existing step, do NOT edit
+  that step. Add the detail as a NEW step directly after it.
+- Keep the punctuation, symbols, and capitalization of every
+  existing step and warning identical.
 
 Return JSON in exactly this format:
 
@@ -230,10 +241,18 @@ Owner's answers:
     new_steps = _clean_list(data.get("steps"))
     new_warnings = _clean_list(data.get("warnings"))
 
-    if not (
-        _keeps_original_items(steps, new_steps)
-        and _keeps_original_items(warnings, new_warnings)
-    ):
+    missing = (
+        _first_missing_item(steps, new_steps)
+        or _first_missing_item(warnings, new_warnings)
+    )
+
+    if missing is not None:
+        print(
+            "Merge rejected. This original item did not come back "
+            "unchanged:",
+            missing
+        )
+        print("AI returned steps:", json.dumps(new_steps, indent=2))
         raise MergeAlteredContentError(
             "The AI changed existing procedure text."
         )
