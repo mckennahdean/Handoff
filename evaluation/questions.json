@@ -46,5 +46,38 @@
     {"id": "q41", "type": "off_topic", "question": "Can you help me write a cover letter?", "expected": []},
     {"id": "q42", "type": "off_topic", "question": "What's the weather tomorrow?", "expected": []}
   ],
-  "pairs": []
+  "pairs": [
+    {"id": "p01", "kind": "paraphrase", "same": true, "a": "How often should we descale the espresso machine?", "b": "When is the espresso machine supposed to be descaled?"},
+    {"id": "p02", "kind": "paraphrase", "same": true, "a": "How do I replace the grinder burrs?", "b": "What's the process for swapping out the burrs on the grinder?"},
+    {"id": "p03", "kind": "paraphrase", "same": true, "a": "What's the Wi-Fi password for customers?", "b": "A customer is asking for the wifi code, what is it?"},
+    {"id": "p04", "kind": "paraphrase", "same": true, "a": "How do I request time off?", "b": "Who do I ask if I need a day off next week?"},
+    {"id": "p05", "kind": "paraphrase", "same": true, "a": "How is the tip pool split each week?", "b": "How do tips get divided between the staff?"},
+    {"id": "p06", "kind": "paraphrase", "same": true, "a": "How do I check the balance on a customer's gift card?", "b": "Can I look up how much money is left on a gift card?"},
+    {"id": "p07", "kind": "paraphrase", "same": true, "a": "How do we handle a large catering order for an office?", "b": "An office wants 40 coffees delivered Friday, how do we handle that?"},
+    {"id": "p08", "kind": "paraphrase", "same": true, "a": "How do I make the seasonal pumpkin spice syrup?", "b": "What's the recipe for our pumpkin spice syrup?"},
+    {"id": "p09", "kind": "paraphrase", "same": true, "a": "How do I clock in at the start of my shift?", "b": "Where do I punch in when I get to work?"},
+    {"id": "p10", "kind": "paraphrase", "same": true, "a": "What's the dress code for baristas?", "b": "What am I allowed to wear on shift?"},
+    {"id": "p11", "kind": "paraphrase", "same": true, "a": "Where should employees park?", "b": "Is there a staff parking spot?"},
+    {"id": "p12", "kind": "paraphrase", "same": true, "a": "What are our holiday hours?", "b": "Are we open on Thanksgiving?"},
+    {"id": "p13", "kind": "paraphrase", "same": true, "a": "Do we have a loyalty or rewards program?", "b": "Can customers earn points toward free drinks?"},
+    {"id": "p14", "kind": "paraphrase", "same": true, "a": "What's the recipe for a cortado?", "b": "How do I make a cortado?"},
+    {"id": "p15", "kind": "paraphrase", "same": true, "a": "How much extra do we charge for oat milk?", "b": "Is there an upcharge for alternative milk?"},
+
+    {"id": "p16", "kind": "hard_negative", "same": false, "a": "How often should we descale the espresso machine?", "b": "What descaling solution do we use?"},
+    {"id": "p17", "kind": "hard_negative", "same": false, "a": "How do I replace the grinder burrs?", "b": "Where do we order replacement grinder parts?"},
+    {"id": "p18", "kind": "hard_negative", "same": false, "a": "What's the Wi-Fi password for customers?", "b": "What's the password for the register login?"},
+    {"id": "p19", "kind": "hard_negative", "same": false, "a": "How do I request time off?", "b": "How do I swap a shift with a coworker?"},
+    {"id": "p20", "kind": "hard_negative", "same": false, "a": "How is the tip pool split each week?", "b": "When is payday?"},
+    {"id": "p21", "kind": "hard_negative", "same": false, "a": "How do I check the balance on a customer's gift card?", "b": "How do I sell a gift card?"},
+    {"id": "p22", "kind": "hard_negative", "same": false, "a": "How do I make the seasonal pumpkin spice syrup?", "b": "When does the pumpkin spice latte come back on the menu?"},
+    {"id": "p23", "kind": "hard_negative", "same": false, "a": "What's the dress code for baristas?", "b": "Where do I get a new apron?"},
+    {"id": "p24", "kind": "hard_negative", "same": false, "a": "Do we have a loyalty or rewards program?", "b": "How do I check the balance on a customer's gift card?"},
+    {"id": "p25", "kind": "hard_negative", "same": false, "a": "What are our holiday hours?", "b": "How do I request time off?"},
+    {"id": "p26", "kind": "hard_negative", "same": false, "a": "How much extra do we charge for oat milk?", "b": "Do we sell oat milk by the carton?"},
+    {"id": "p27", "kind": "hard_negative", "same": false, "a": "How do we handle a large catering order for an office?", "b": "Can customers place orders online?"},
+
+    {"id": "p28", "kind": "unrelated", "same": false, "a": "Where should employees park?", "b": "What's the Wi-Fi password for customers?"},
+    {"id": "p29", "kind": "unrelated", "same": false, "a": "How do I clock in at the start of my shift?", "b": "What's the recipe for a cortado?"},
+    {"id": "p30", "kind": "unrelated", "same": false, "a": "What time is it?", "b": "What's the weather tomorrow?"}
+  ]
 }
