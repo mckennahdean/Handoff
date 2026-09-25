@@ -103,8 +103,12 @@ jobs:
         run: npm run build
 
   docker:
-    name: Docker build and smoke test
+    name: Docker build, smoke test, and publish
+    needs: [backend, frontend]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -128,6 +132,40 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           docker images --format "table {{.Repository}}\t{{.Size}}" | grep -E "REPOSITORY|handoff" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Log in to GitHub Container Registry
+        # Pull requests from forks get a read-only token; skip publishing there.
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Publish the smoke-tested images
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          OWNER: ${{ github.repository_owner }}
+          EVENT: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          owner=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+          short_sha=${COMMIT::7}
+
+          if [ "$EVENT" = "pull_request" ]; then
+            extra_tag="pr-$PR_NUMBER"
+          else
+            extra_tag="latest"
+          fi
+
+          echo "## Published images" >> $GITHUB_STEP_SUMMARY
+
+          for service in backend frontend; do
+            image="ghcr.io/$owner/handoff-$service"
+
+            for tag in "sha-$short_sha" "$extra_tag"; do
+              docker tag "handoff-$service" "$image:$tag"
+              docker push "$image:$tag"
+              echo "- \`$image:$tag\`" >> $GITHUB_STEP_SUMMARY
+            done
+          done
 
       - name: Show container logs if anything failed
         if: failure()

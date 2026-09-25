@@ -22,6 +22,8 @@ RUN npm run build
 # Stage 2: serve only the built files. This nginx image runs as a
 # non-root user and listens on port 8080.
 FROM nginxinc/nginx-unprivileged:stable-alpine
+LABEL org.opencontainers.image.source="https://github.com/mckennahdean/Handoff" \
+      org.opencontainers.image.description="Handoff frontend: Vue app served by nginx"
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html

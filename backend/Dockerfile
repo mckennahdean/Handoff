@@ -3,6 +3,8 @@
 #   docker build -f backend/Dockerfile -t handoff-backend .
 
 FROM python:3.13-slim
+LABEL org.opencontainers.image.source="https://github.com/mckennahdean/Handoff" \
+      org.opencontainers.image.description="Handoff backend: FastAPI API with grounded Q&A"
 
 # Print logs immediately instead of buffering them, and skip .pyc files.
 ENV PYTHONUNBUFFERED=1 \
