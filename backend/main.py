@@ -31,7 +31,8 @@ from backend.gemini_service import (
     merge_gap_answers,
     MergeAlteredContentError,
     answer_question_from_procedure,
-    transcribe_audio
+    transcribe_audio,
+    NOT_DOCUMENTED_REPLY
 )
 
 from backend.auth_routes import router as auth_router
@@ -471,23 +472,45 @@ def approve_procedure(
         "resolved_gaps": getattr(saved, "resolved_gap_count", 0)
     }
 
+def abstain(question: str, similarity, message: str) -> dict:
+    """Decline to answer, and record the question as a knowledge gap."""
+    try:
+        log_gap(question, similarity or 0.0)
+        gap_logged = True
+
+    except Exception as error:
+        print(
+            "Gap logging error:",
+            error
+        )
+
+        gap_logged = False
+
+    response = {
+        "status": "not_documented",
+        "message": message,
+        "gap_logged": gap_logged
+    }
+
+    if similarity is not None:
+        response["similarity"] = similarity
+
+    return response
 
 @app.post("/api/query", dependencies=[Depends(get_current_user)])
 def query_procedure(
     request: QueryRequest
 ):
-    if not request.question.strip():
+    question = request.question.strip()
+
+    if not question:
         raise HTTPException(
             status_code=400,
             detail="Question cannot be empty."
         )
 
     try:
-        procedure, similarity = (
-            find_best_matching_procedure(
-                request.question
-            )
-        )
+        procedure, similarity = find_best_matching_procedure(question)
 
     except Exception as error:
         print(
@@ -496,58 +519,30 @@ def query_procedure(
         )
 
         raise HTTPException(
-            status_code=500,
-            detail="Embedding or retrieval service error."
+            status_code=503,
+            detail=(
+                "Handoff could not search the knowledge base right now. "
+                "Please try again in a moment."
+            )
         )
 
+    # Threshold Gate: no approved procedure is close enough.
     if procedure is None:
-        try:
-            log_gap(
-                request.question,
-                0.0
-            )
-
-        except Exception as error:
-            print(
-                "Gap logging error:",
-                error
-            )
-
-        return {
-            "status": "not_documented",
-            "message": (
-                "No matching procedure was found."
-            ),
-            "gap_logged": True
-        }
+        return abstain(
+            question,
+            None,
+            "No approved procedures exist yet."
+        )
 
     if similarity < ANSWER_THRESHOLD:
-        try:
-            log_gap(
-                request.question,
-                similarity
-            )
-
-        except Exception as error:
-            print(
-                "Gap logging error:",
-                error
-            )
-
-        return {
-            "status": "not_documented",
-            "message": (
-                "This information is not currently documented."
-            ),
-            "similarity": similarity,
-            "gap_logged": True
-        }
+        return abstain(
+            question,
+            similarity,
+            "This information is not currently documented."
+        )
 
     try:
-        answer = answer_question_from_procedure(
-            request.question,
-            procedure
-        )
+        answer = answer_question_from_procedure(question, procedure)
 
     except Exception as error:
         print(
@@ -556,8 +551,20 @@ def query_procedure(
         )
 
         raise HTTPException(
-            status_code=500,
-            detail="LLM service error."
+            status_code=503,
+            detail=(
+                "Handoff could not generate an answer right now. "
+                "Please try again in a moment."
+            )
+        )
+
+    # Generation Gate: the closest procedure is related,
+    # but the AI found it does not contain this answer.
+    if NOT_DOCUMENTED_REPLY.lower() in answer.lower():
+        return abstain(
+            question,
+            similarity,
+            "The closest procedure does not cover this question."
         )
 
     return {

@@ -11,15 +11,23 @@ from google.genai import errors
 
 load_dotenv()
 
-# One place to change the model for every text task.
-TEXT_MODEL = "gemini-3.6-flash"
+# Models are configurable in .env so they can be switched without
+# code changes. Check each model's limits at https://ai.dev/rate-limit
+TEXT_MODEL = os.getenv("GEMINI_TEXT_MODEL", "gemini-3.1-flash-lite")
+STRUCTURE_MODEL = os.getenv("GEMINI_STRUCTURE_MODEL", TEXT_MODEL)
+EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
 
 # Owners never face more than this many follow-up questions.
 MAX_GAP_QUESTIONS = 5
 
-# For unavailable error message 5xx from Google
-# This will automatically retry 3 times before failing.
+# Temporary Google errors (5xx) are retried this many times in total.
 MAX_ATTEMPTS = 3
+
+# The exact reply the answer prompt uses when the retrieved
+# procedure does not contain the answer. Checked by the API.
+NOT_DOCUMENTED_REPLY = (
+    "This information is not documented in the retrieved procedure."
+)
 
 client = None
 
@@ -45,27 +53,40 @@ def get_client():
 
     return client
 
+
 def _is_transient(error) -> bool:
-    # 5xx means Google had a temporary problem; 429 means we were
-    # rate limited. Both usually succeed on retry. Other 4xx errors
-    # mean our request was wrong, so retrying would not help.
-    return (
-        isinstance(error, errors.ServerError)
-        or getattr(error, "code", None) == 429
-    )
+    # Only 5xx errors (a temporary problem on Google's side) are
+    # worth an immediate retry. 429 means a quota or rate limit,
+    # which will not clear within a few seconds.
+    return isinstance(error, errors.ServerError)
 
 
-def _generate(**kwargs):
-    """Call Gemini, retrying temporary failures with exponential backoff."""
+def _with_retry(call, **kwargs):
+    """Run a Gemini call, retrying temporary failures with backoff."""
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            return get_client().models.generate_content(**kwargs)
+            return call(**kwargs)
 
         except errors.APIError as error:
             if attempt == MAX_ATTEMPTS or not _is_transient(error):
                 raise
 
             time.sleep(2 ** (attempt - 1))  # wait 1s, then 2s
+
+
+def _generate(**kwargs):
+    return _with_retry(get_client().models.generate_content, **kwargs)
+
+
+def embed_text(text: str) -> list:
+    response = _with_retry(
+        get_client().models.embed_content,
+        model=EMBEDDING_MODEL,
+        contents=text
+    )
+
+    return response.embeddings[0].values
+
 
 def _json_config(temperature=None):
     # JSON mode forces Gemini to return valid JSON, so responses
@@ -102,9 +123,8 @@ def _keeps_original_items(original: list, updated: list) -> bool:
 
 
 def structure_procedure(text: str):
-
     response = _generate(
-        model=TEXT_MODEL,
+        model=STRUCTURE_MODEL,
         config=_json_config(),
         contents=f"""
 You are helping a small business owner document a procedure
@@ -161,7 +181,6 @@ def merge_gap_answers(
     Insert-only: existing steps and warnings must come back
     word for word, or the merge is rejected.
     """
-
     steps = [step for step in steps if step.strip()]
     warnings = [warning for warning in warnings if warning.strip()]
 
@@ -229,7 +248,6 @@ def answer_question_from_procedure(
     question: str,
     procedure
 ):
-
     procedure_text = (
         f"Title: {procedure.title}\n"
         f"Steps: {procedure.steps}\n"
@@ -238,13 +256,16 @@ def answer_question_from_procedure(
 
     response = _generate(
         model=TEXT_MODEL,
+        # Temperature 0: the same question over the same procedure
+        # should always get the same grounded answer.
+        config=types.GenerateContentConfig(temperature=0),
         contents=f"""
 You are answering an employee question using ONLY the procedure below.
 
 Do not use outside knowledge.
 Do not guess.
-If the procedure does not contain the answer, say:
-"This information is not documented in the retrieved procedure."
+If the procedure does not contain the answer, reply with exactly:
+"{NOT_DOCUMENTED_REPLY}"
 
 Procedure:
 {procedure_text}
@@ -254,7 +275,7 @@ Employee question:
 """
     )
 
-    return response.text
+    return response.text.strip()
 
 
 def transcribe_audio(file_path: str):

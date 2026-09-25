@@ -2,7 +2,6 @@ import json
 import os
 
 from dotenv import load_dotenv
-from google import genai
 
 from sqlalchemy.orm import Session
 from sqlalchemy import case, select
@@ -10,26 +9,13 @@ from sqlalchemy import case, select
 from backend.database import engine
 from backend.models import Procedure, Gap
 from backend.config import ANSWER_THRESHOLD, GAP_GROUPING_THRESHOLD
+from backend.gemini_service import embed_text
 
 from datetime import datetime, timezone
 from typing import Optional
 
 
 load_dotenv()
-
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
-)
-
-
-def embed_text(text: str) -> list:
-    embedding_response = client.models.embed_content(
-        model="gemini-embedding-001",
-        contents=text
-    )
-
-    return embedding_response.embeddings[0].values
-
 
 def create_embedding(procedure_data: dict) -> list:
     return embed_text(
@@ -192,14 +178,7 @@ def get_procedures(include_pending: bool = True):
 
 
 def find_best_matching_procedure(question: str):
-    embedding_response = client.models.embed_content(
-        model="gemini-embedding-001",
-        contents=question
-    )
-
-    question_embedding = (
-        embedding_response.embeddings[0].values
-    )
+    question_embedding = embed_text(question)
 
     with Session(engine) as session:
         distance = Procedure.embedding.cosine_distance(

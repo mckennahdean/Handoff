@@ -412,3 +412,76 @@ def test_employee_cannot_dismiss_gap():
     response = client.post("/api/gaps/3/dismiss")
 
     assert response.status_code == 403
+
+# ---------- Honest abstention ----------
+
+def test_ai_refusal_becomes_logged_abstention(monkeypatch):
+    from backend.gemini_service import NOT_DOCUMENTED_REPLY
+
+    logged = {}
+
+    monkeypatch.setattr(
+        main_module,
+        "find_best_matching_procedure",
+        lambda question: (fake_procedure("approved"), 0.85)
+    )
+
+    monkeypatch.setattr(
+        main_module,
+        "answer_question_from_procedure",
+        lambda question, procedure: NOT_DOCUMENTED_REPLY
+    )
+
+    def fake_log_gap(question, similarity):
+        logged["question"] = question
+
+    monkeypatch.setattr(main_module, "log_gap", fake_log_gap)
+
+    response = client.post(
+        "/api/query",
+        json={"question": "How often do we descale the machine?"}
+    )
+
+    data = response.json()
+
+    assert data["status"] == "not_documented"
+    assert data["gap_logged"] is True
+    assert logged["question"] == "How often do we descale the machine?"
+
+
+def test_gap_logged_is_false_when_logging_fails(monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "find_best_matching_procedure",
+        lambda question: (fake_procedure("approved"), 0.40)
+    )
+
+    def broken_log_gap(question, similarity):
+        raise RuntimeError("database down")
+
+    monkeypatch.setattr(main_module, "log_gap", broken_log_gap)
+
+    response = client.post(
+        "/api/query",
+        json={"question": "How do I request vacation?"}
+    )
+
+    assert response.json()["gap_logged"] is False
+
+
+def test_retrieval_outage_returns_503(monkeypatch):
+    def outage(question):
+        raise RuntimeError("503 UNAVAILABLE")
+
+    monkeypatch.setattr(
+        main_module,
+        "find_best_matching_procedure",
+        outage
+    )
+
+    response = client.post(
+        "/api/query",
+        json={"question": "How do I clean the espresso machine?"}
+    )
+
+    assert response.status_code == 503
