@@ -10,6 +10,20 @@ jobs:
   backend:
     name: Backend tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: handoff_test
+          POSTGRES_USER: handoff_user
+          POSTGRES_PASSWORD: handoff_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U handoff_user -d handoff_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -28,6 +42,7 @@ jobs:
       - name: Run pytest with coverage
         env:
           GEMINI_API_KEY: fake-key-for-ci
+          TEST_DATABASE_URL: postgresql+psycopg://handoff_user:handoff_password@localhost:5432/handoff_test
         run: >
           python -m pytest backend/ -v --no-header
           --ignore=backend/test.py --ignore=backend/test_embedding.py
