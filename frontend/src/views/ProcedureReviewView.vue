@@ -1388,12 +1388,23 @@ textarea:disabled {
 .close-button {
   width: 32px;
   height: 32px;
+  flex: 0 0 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
   border: 0;
   border-radius: 50%;
   background: #f3eee8;
   color: #53635d;
   font-size: 21px;
+  line-height: 1;
   cursor: pointer;
+}
+
+.close-button:hover {
+  background: #e9e2da;
+  box-shadow: none;
+  transform: none;
 }
 
 .modal-description {
