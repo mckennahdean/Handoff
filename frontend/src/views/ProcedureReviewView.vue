@@ -200,6 +200,7 @@ const changesComment = ref('')
 const message = ref('')
 const isSubmitting = ref(false)
 const approvedLastConfirmed = ref(null)
+const resolvedGapCount = ref(0)
 const errorMessage = ref('')
 const addStep = () => {
   steps.value.push('')
@@ -317,6 +318,7 @@ const approveProcedure = async () => {
 
     status.value = 'approved'
     version.value = data.version
+    resolvedGapCount.value = data.resolved_gaps || 0
 
     message.value = 'Procedure approved successfully.'
   } catch (error) {
@@ -801,6 +803,11 @@ onMounted(loadProcedure)
           <p>
             Employees can now access this procedure through
             Approved Procedures and Ask Handoff.
+          </p>
+          <p v-if="resolvedGapCount > 0">
+            This procedure also resolved {{ resolvedGapCount }}
+            knowledge {{ resolvedGapCount === 1 ? 'gap' : 'gaps' }}
+            that employees had asked about.
           </p>
         </div>
       </div>

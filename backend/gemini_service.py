@@ -260,11 +260,11 @@ Employee question:
 def transcribe_audio(file_path: str):
     gemini_client = get_client()
 
-    audio_file = _generate(
+    audio_file = gemini_client.files.upload(
         file=Path(file_path)
     )
 
-    response = gemini_client.models.generate_content(
+    response = _generate(
         model=TEXT_MODEL,
         contents=[
             audio_file,

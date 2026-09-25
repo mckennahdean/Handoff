@@ -1,13 +1,18 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { apiFetch } from '../api.js'
+import { useRouter } from 'vue-router'
+import { apiFetch, errorMessage as apiErrorMessage } from '../api.js'
+
+const router = useRouter()
 
 const gaps = ref([])
 const selectedGap = ref(null)
 const showDetails = ref(false)
 const searchQuery = ref('')
+const statusFilter = ref('open')
 const isLoading = ref(true)
 const errorMessage = ref('')
+const actionMessage = ref('')
 
 const formatDate = (dateValue) => {
   if (!dateValue) {
@@ -39,51 +44,74 @@ const formatSimilarity = (similarity) => {
   return `${(Number(similarity) * 100).toFixed(1)}%`
 }
 
+const statusLabel = (status) => {
+  const labels = {
+    open: 'Open',
+    resolved: 'Resolved',
+    dismissed: 'Dismissed'
+  }
+
+  return labels[status] || 'Unknown'
+}
+
+const askedLabel = (count) => {
+  return count === 1 ? 'Asked once' : `Asked ${count} times`
+}
+
 const loadGaps = async () => {
   isLoading.value = true
   errorMessage.value = ''
 
   try {
-    const response = await apiFetch(
-      '/api/gaps'
-    )
-
+    const response = await apiFetch('/api/gaps')
     const data = await response.json()
 
     if (!response.ok) {
       throw new Error(
-        data.detail || 'Unable to load documentation gaps.'
+        apiErrorMessage(data, 'Unable to load knowledge gaps.')
       )
     }
 
-    gaps.value = Array.isArray(data)
-      ? data
-      : []
+    gaps.value = Array.isArray(data) ? data : []
   } catch (error) {
     console.error(error)
 
     errorMessage.value =
       error.message ||
-      'Handoff could not connect to the documentation gap service.'
+      'Handoff could not connect to the knowledge gap service.'
   } finally {
     isLoading.value = false
   }
 }
 
-const visibleGaps = computed(() => {
-  const query = searchQuery.value
-    .trim()
-    .toLowerCase()
+const openGaps = computed(() =>
+  gaps.value.filter((gap) => gap.status === 'open')
+)
 
-  if (!query) {
-    return gaps.value
-  }
+const resolvedCount = computed(() =>
+  gaps.value.filter((gap) => gap.status === 'resolved').length
+)
 
-  return gaps.value.filter((gap) =>
-    gap.question
-      ?.toLowerCase()
-      .includes(query)
+// Total times employees asked questions that are still unanswered.
+const openAskedCount = computed(() =>
+  openGaps.value.reduce(
+    (total, gap) => total + (gap.frequency_count || 1),
+    0
   )
+)
+
+const visibleGaps = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+
+  return gaps.value.filter((gap) => {
+    const matchesStatus =
+      statusFilter.value === 'all' || gap.status === statusFilter.value
+
+    const matchesSearch =
+      !query || gap.question?.toLowerCase().includes(query)
+
+    return matchesStatus && matchesSearch
+  })
 })
 
 const viewGap = (gap) => {
@@ -98,11 +126,45 @@ const closeDetails = () => {
 
 const clearFilters = () => {
   searchQuery.value = ''
+  statusFilter.value = 'open'
 }
 
-onMounted(() => {
-  loadGaps()
-})
+const dismissGap = async (gap) => {
+  const confirmed = window.confirm(
+    'Dismiss this question? Use this for questions no procedure ' +
+    'should cover. It will move to the Dismissed list.'
+  )
+
+  if (!confirmed) {
+    return
+  }
+
+  try {
+    const response = await apiFetch(`/api/gaps/${gap.id}/dismiss`, {
+      method: 'POST'
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(
+        apiErrorMessage(data, 'Unable to dismiss this gap.')
+      )
+    }
+
+    closeDetails()
+    actionMessage.value = 'Gap dismissed.'
+    await loadGaps()
+  } catch (error) {
+    actionMessage.value = error.message
+  }
+}
+
+const captureProcedure = () => {
+  router.push('/capture-procedure')
+}
+
+onMounted(loadGaps)
 </script>
 
 <template>
@@ -116,7 +178,7 @@ onMounted(() => {
       <div>
         <p class="eyebrow">Owner Workspace</p>
 
-        <h1>Documentation Gaps</h1>
+        <h1>Knowledge Gaps</h1>
 
         <p>
           Review questions Handoff could not confidently answer
@@ -181,7 +243,7 @@ onMounted(() => {
           </span>
 
           <strong>
-            {{ gaps.length }}
+            {{ openGaps.length }}
           </strong>
 
           <p>
@@ -191,29 +253,29 @@ onMounted(() => {
 
         <div class="summary-card">
           <span class="summary-label">
-            Total Questions
+            Times Asked
           </span>
 
           <strong>
-            {{ gaps.length }}
+            {{ openAskedCount }}
           </strong>
 
           <p>
-            Questions identified as gaps
+            Employee questions still unanswered
           </p>
         </div>
 
         <div class="summary-card">
           <span class="summary-label">
-            Retrieval Threshold
+            Resolved
           </span>
 
           <strong>
-            70%
+            {{ resolvedCount }}
           </strong>
 
           <p>
-            Questions below this threshold are logged
+            Answered by newly approved procedures
           </p>
         </div>
 
@@ -263,6 +325,23 @@ onMounted(() => {
 
         </div>
 
+        <div class="search-wrapper">
+          <label for="gap-status">
+            Show
+          </label>
+
+          <select
+            id="gap-status"
+            v-model="statusFilter"
+            class="status-select"
+          >
+            <option value="open">Open</option>
+            <option value="resolved">Resolved</option>
+            <option value="dismissed">Dismissed</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+
         <button
           type="button"
           class="clear-filter-button"
@@ -276,6 +355,14 @@ onMounted(() => {
       <!-- =========================================
            Gap List
            ========================================= -->
+
+      <p
+        v-if="actionMessage"
+        class="action-message"
+      >
+        {{ actionMessage }}
+      </p>
+
       <section class="gap-list">
 
         <div
@@ -319,23 +406,34 @@ onMounted(() => {
                   {{ gap.question }}
                 </h2>
 
-                <span class="status open">
-                  Open
+                <span
+                  class="status"
+                  :class="gap.status"
+                >
+                  {{ statusLabel(gap.status) }}
                 </span>
 
               </div>
 
               <div class="gap-meta">
-
-                <span>
-                  Identified {{ formatDate(gap.created_at) }}
+                <span class="asked-count">
+                  {{ askedLabel(gap.frequency_count) }}
                 </span>
 
                 <span>
-                  Similarity:
-                  {{ formatSimilarity(gap.similarity) }}
+                  Last asked {{ formatDate(gap.last_asked_at) }}
                 </span>
 
+                <span>
+                  Closest match: {{ formatSimilarity(gap.similarity) }}
+                </span>
+
+                <span
+                  v-if="gap.status === 'resolved'"
+                  class="resolved-note"
+                >
+                  Resolved by {{ gap.resolved_by_title || 'a new procedure' }}
+                </span>
               </div>
 
             </div>
@@ -374,7 +472,7 @@ onMounted(() => {
 
             <div>
               <p class="eyebrow">
-                Documentation Gap
+                Knowledge Gap
               </p>
 
               <h2 id="gap-modal-title">
@@ -416,7 +514,7 @@ onMounted(() => {
               </span>
 
               <strong>
-                Open
+                {{ statusLabel(selectedGap.status) }}
               </strong>
 
             </div>
@@ -424,7 +522,7 @@ onMounted(() => {
             <div class="modal-info">
 
               <span>
-                Similarity
+                Closest Match
               </span>
 
               <strong>
@@ -436,11 +534,11 @@ onMounted(() => {
             <div class="modal-info">
 
               <span>
-                Identified
+                Times Asked
               </span>
 
               <strong>
-                {{ formatDate(selectedGap.created_at) }}
+                {{ selectedGap.frequency_count }}
               </strong>
 
             </div>
@@ -448,7 +546,10 @@ onMounted(() => {
           </div>
 
           <!-- Recommended Action -->
-          <div class="recommendation">
+          <div
+            v-if="selectedGap.status === 'open'"
+            class="recommendation"
+          >
 
             <div class="recommendation-icon">
               →
@@ -474,6 +575,24 @@ onMounted(() => {
           <div class="modal-actions">
 
             <button
+              v-if="selectedGap.status === 'open'"
+              type="button"
+              class="secondary-button"
+              @click="dismissGap(selectedGap)"
+            >
+              Dismiss
+            </button>
+
+            <button
+              v-if="selectedGap.status === 'open'"
+              type="button"
+              class="capture-button"
+              @click="captureProcedure"
+            >
+              Capture a Procedure
+            </button>
+
+            <button
               type="button"
               class="secondary-button"
               @click="closeDetails"
@@ -486,25 +605,7 @@ onMounted(() => {
         </section>
 
       </div>
-
-      <!-- =========================================
-           Live Data Notice
-           ========================================= -->
-      <section class="prototype-note">
-
-        <strong>
-          Connected documentation gap service
-        </strong>
-
-        <p>
-          Documentation gaps are retrieved from the Handoff API
-          and PostgreSQL database using GET /api/gaps.
-        </p>
-
-      </section>
-
     </template>
-
   </main>
 </template>
 
@@ -1104,6 +1205,63 @@ onMounted(() => {
   line-height: 1.5;
 }
 
+/* =========================================
+   Knowledge Gap Statuses and Actions
+   ========================================= */
+
+.status.resolved {
+  background: #e6f2ee;
+  color: #275b4f;
+}
+
+
+.status.dismissed {
+  background: #efefef;
+  color: #777777;
+}
+
+
+.asked-count {
+  color: #d26f3d;
+  font-weight: 700;
+}
+
+
+.resolved-note {
+  color: #275b4f;
+  font-weight: 600;
+}
+
+
+.status-select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d8d2c8;
+  border-radius: 8px;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 15px;
+}
+
+
+.action-message {
+  margin: 0 0 16px;
+  color: #275b4f;
+  font-weight: 600;
+}
+
+
+.capture-button {
+  padding: 11px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #275b4f;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
 
 /* =========================================
    Responsive Layout

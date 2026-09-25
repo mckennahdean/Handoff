@@ -40,7 +40,11 @@ const loadStats = async () => {
     }
 
     if (gapsResponse.ok) {
-      documentationGaps.value = (await gapsResponse.json()).length
+      const gaps = await gapsResponse.json()
+
+      documentationGaps.value = gaps.filter(
+        (gap) => gap.status === 'open'
+      ).length
     }
   } catch {
     // Keep the placeholders if the server cannot be reached.
@@ -163,7 +167,7 @@ const goTo = (path) => {
         </span>
       </button>
 
-      <!-- Documentation gaps -->
+      <!-- Knowledge gaps -->
       <button
         class="stat-card"
         @click="goTo('/gaps')"
@@ -281,7 +285,7 @@ const goTo = (path) => {
           </div>
 
           <div>
-            <h3>Documentation Gaps</h3>
+            <h3>Knowledge Gaps</h3>
 
             <p>
               See questions Handoff could not answer and

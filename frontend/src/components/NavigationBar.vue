@@ -52,7 +52,7 @@ const logout = () => {
       <!-- Owner-only navigation -->
       <RouterLink
         v-if="isOwner"
-        to="/procedure-review"
+        to="/procedures"
       >
         Review Procedures
       </RouterLink>
@@ -62,7 +62,7 @@ const logout = () => {
         v-if="isOwner"
         to="/gaps"
       >
-        Documentation Gaps
+        Knowledge Gaps
       </RouterLink>
 
       <!-- Available to both Owners and Employees -->
