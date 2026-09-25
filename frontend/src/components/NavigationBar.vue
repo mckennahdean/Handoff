@@ -52,14 +52,6 @@ const logout = () => {
       <!-- Owner-only navigation -->
       <RouterLink
         v-if="isOwner"
-        to="/procedures"
-      >
-        Review Procedures
-      </RouterLink>
-
-      <!-- Owner-only navigation -->
-      <RouterLink
-        v-if="isOwner"
         to="/gaps"
       >
         Knowledge Gaps
