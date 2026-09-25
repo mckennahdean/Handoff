@@ -90,8 +90,9 @@ def embed_text(text: str) -> list:
 def embed_texts(texts: list) -> list:
     """Embed several texts in a single request (up to 100).
 
-    Used for procedure chunks, so approving a 20-step procedure
-    costs one API request instead of twenty.
+    Faster than one call per text, but each text still counts
+    toward the free tier's 100-per-minute embedding quota, so
+    bulk jobs must pace themselves.
     """
     response = _with_retry(
         get_client().models.embed_content,
