@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String, Text, DateTime, Float, Integer
+from sqlalchemy import String, Text, DateTime, Float, Integer, ForeignKey
 
 from pgvector.sqlalchemy import Vector
 from typing import Optional
@@ -10,6 +10,30 @@ from typing import Optional
 class Base(DeclarativeBase):
     pass
 
+class ProcedureChunk(Base):
+    """One retrieval chunk per procedure step or warning.
+
+    Retrieval matches questions against these chunks instead of one
+    whole-procedure embedding, which diluted meaning (see the
+    evaluation in evaluation/run_retrieval.py, Strategy C).
+    """
+    __tablename__ = "procedure_chunks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    # CASCADE: deleting a procedure deletes its chunks in the database.
+    procedure_id: Mapped[int] = mapped_column(
+        ForeignKey("procedures.id", ondelete="CASCADE"),
+        index=True
+    )
+
+    text: Mapped[str] = mapped_column(
+        Text
+    )
+
+    embedding: Mapped[list] = mapped_column(
+        Vector(3072)
+    )
 
 class Procedure(Base):
     __tablename__ = "procedures"

@@ -18,6 +18,7 @@ from pathlib import Path
 from google.genai import errors, types
 
 from backend.gemini_service import EMBEDDING_MODEL, get_client
+from backend.db_service import procedure_chunk_texts
 
 EVAL_DIR = Path(__file__).parent
 PROCEDURES_FILE = EVAL_DIR / "procedures.json"
@@ -105,7 +106,7 @@ class EmbeddingCache:
 
 
 def whole_text(procedure):
-    # Mirrors create_embedding() in backend/db_service.py.
+    # The previous app behavior (whole-procedure embedding), kept as the baseline.
     return (
         procedure["title"] + " "
         + " ".join(procedure["steps"]) + " "
@@ -114,11 +115,9 @@ def whole_text(procedure):
 
 
 def chunk_texts(procedure):
-    # One chunk per step or warning, with the title for context.
-    return [
-        f"{procedure['title']}: {item}"
-        for item in procedure["steps"] + procedure["warnings"]
-    ]
+    # The exact function the app uses, so the evaluation
+    # always measures the real chunking.
+    return procedure_chunk_texts(procedure)
 
 
 def unit(vector):

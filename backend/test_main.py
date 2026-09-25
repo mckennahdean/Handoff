@@ -533,3 +533,18 @@ def test_retrieval_outage_returns_503(monkeypatch):
     )
 
     assert response.status_code == 503
+
+from backend.db_service import procedure_chunk_texts
+
+def test_chunks_cover_every_step_and_warning_with_title():
+    chunks = procedure_chunk_texts({
+        "title": "Closing the Cafe",
+        "steps": ["Lock the front door.", "Count the till."],
+        "warnings": ["Never leave cash overnight."]
+    })
+
+    assert chunks == [
+        "Closing the Cafe: Lock the front door.",
+        "Closing the Cafe: Count the till.",
+        "Closing the Cafe: Never leave cash overnight."
+    ]

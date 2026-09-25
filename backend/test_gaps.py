@@ -264,3 +264,23 @@ def test_generate_does_not_retry_bad_requests(monkeypatch):
         gemini_service._generate(model="test", contents="test")
 
     assert calls["count"] == 1
+
+def test_embed_texts_returns_one_vector_per_text(monkeypatch):
+    fake_models = SimpleNamespace(
+        embed_content=lambda **kwargs: SimpleNamespace(
+            embeddings=[
+                SimpleNamespace(values=[0.1, 0.2]),
+                SimpleNamespace(values=[0.3, 0.4])
+            ]
+        )
+    )
+
+    monkeypatch.setattr(
+        gemini_service,
+        "get_client",
+        lambda: SimpleNamespace(models=fake_models)
+    )
+
+    vectors = gemini_service.embed_texts(["step one", "step two"])
+
+    assert vectors == [[0.1, 0.2], [0.3, 0.4]]

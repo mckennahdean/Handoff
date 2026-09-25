@@ -4,12 +4,12 @@ import os
 from dotenv import load_dotenv
 
 from sqlalchemy.orm import Session
-from sqlalchemy import case, select
+from sqlalchemy import case, delete, select
 
 from backend.database import engine
-from backend.models import Procedure, Gap
+from backend.models import Procedure, ProcedureChunk, Gap
 from backend.config import ANSWER_THRESHOLD, GAP_GROUPING_THRESHOLD
-from backend.gemini_service import embed_text
+from backend.gemini_service import embed_text, embed_texts
 
 from datetime import datetime, timezone
 from typing import Optional
@@ -17,14 +17,43 @@ from typing import Optional
 
 load_dotenv()
 
-def create_embedding(procedure_data: dict) -> list:
-    return embed_text(
-        procedure_data["title"]
-        + " "
-        + " ".join(procedure_data["steps"])
-        + " "
-        + " ".join(procedure_data["warnings"])
+def procedure_chunk_texts(procedure_data: dict) -> list:
+    """Split a procedure into one retrieval chunk per step and warning.
+
+    Each chunk carries the title, so a short step still says which
+    procedure it belongs to. Embedding whole procedures diluted
+    their meaning; chunking raised retrieval from 26/28 to 28/28
+    in the evaluation (Strategy C in evaluation/run_retrieval.py).
+    """
+    title = procedure_data["title"]
+
+    return [
+        f"{title}: {item}"
+        for item in procedure_data["steps"] + procedure_data["warnings"]
+    ]
+
+
+def replace_procedure_chunks(
+    session,
+    procedure_id: int,
+    texts: list,
+    vectors: list
+):
+    """Swap a procedure's retrieval chunks for a fresh set."""
+    session.execute(
+        delete(ProcedureChunk).where(
+            ProcedureChunk.procedure_id == procedure_id
+        )
     )
+
+    session.add_all([
+        ProcedureChunk(
+            procedure_id=procedure_id,
+            text=text,
+            embedding=vector
+        )
+        for text, vector in zip(texts, vectors)
+    ])
 
 
 def save_draft(procedure_data: dict):
@@ -55,7 +84,7 @@ def save_procedure(
     procedure_data: dict,
     procedure_id: Optional[int] = None
 ):
-    """Approve a procedure: embed it and mark it approved.
+    """Approve a procedure: chunk and embed it, and mark it approved.
 
     With a procedure_id, approves that draft, or re-approves an
     edited procedure and increments its version. Without one,
@@ -77,14 +106,31 @@ def save_procedure(
             if procedure.status == "approved":
                 procedure.version += 1
 
+        # Embed before changing anything else. If the AI service
+        # fails, the session closes without a commit and nothing
+        # is saved, so approval stays all-or-nothing.
+        chunk_texts = procedure_chunk_texts(procedure_data)
+        chunk_vectors = embed_texts(chunk_texts)
+
         procedure.title = procedure_data["title"]
         procedure.steps = json.dumps(procedure_data["steps"])
         procedure.warnings = json.dumps(procedure_data["warnings"])
-        procedure.embedding = create_embedding(procedure_data)
+        # Retired: retrieval now uses procedure_chunks. The column
+        # stays so older rows remain valid without a migration.
+        procedure.embedding = None
         procedure.status = "approved"
         procedure.last_confirmed = datetime.now(timezone.utc)
 
-        # Gives a brand-new procedure its id before gaps link to it.
+        # Gives a brand-new procedure its id before chunks and
+        # gaps link to it.
+        session.flush()
+
+        replace_procedure_chunks(
+            session,
+            procedure.id,
+            chunk_texts,
+            chunk_vectors
+        )
         session.flush()
 
         resolved_count = _resolve_gaps_covered_by(session, procedure)
@@ -100,16 +146,25 @@ def save_procedure(
 def _resolve_gaps_covered_by(session, procedure) -> int:
     """Close open knowledge gaps that this procedure now answers.
 
-    Uses the same test as retrieval: if a gap's question would now
-    match this procedure above the answer threshold, it is resolved.
+    Uses the same test as retrieval: a gap is resolved when its
+    question matches one of this procedure's chunks at or above
+    the answer threshold.
     """
-    distance = Gap.embedding.cosine_distance(procedure.embedding)
+    matching_chunk = (
+        select(ProcedureChunk.id)
+        .where(
+            ProcedureChunk.procedure_id == procedure.id,
+            ProcedureChunk.embedding.cosine_distance(Gap.embedding)
+            <= 1 - ANSWER_THRESHOLD
+        )
+        .exists()
+    )
 
     covered_gaps = session.scalars(
         select(Gap).where(
             Gap.status == "open",
             Gap.embedding.is_not(None),
-            distance <= 1 - ANSWER_THRESHOLD
+            matching_chunk
         )
     ).all()
 
@@ -178,10 +233,12 @@ def get_procedures(include_pending: bool = True):
 
 
 def find_best_matching_procedure(question: str):
+    """Return the approved procedure containing the chunk closest
+    to the question, and that chunk's similarity."""
     question_embedding = embed_text(question)
 
     with Session(engine) as session:
-        distance = Procedure.embedding.cosine_distance(
+        distance = ProcedureChunk.embedding.cosine_distance(
             question_embedding
         )
 
@@ -189,6 +246,10 @@ def find_best_matching_procedure(question: str):
             select(
                 Procedure,
                 distance.label("distance")
+            )
+            .join(
+                ProcedureChunk,
+                ProcedureChunk.procedure_id == Procedure.id
             )
             .where(
                 Procedure.status == "approved"
@@ -205,7 +266,6 @@ def find_best_matching_procedure(question: str):
         similarity = 1 - distance_value
 
         return procedure, similarity
-
 
 def log_gap(question: str, similarity: float):
     """Record an unanswered question, grouping it with an existing

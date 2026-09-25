@@ -87,6 +87,19 @@ def embed_text(text: str) -> list:
 
     return response.embeddings[0].values
 
+def embed_texts(texts: list) -> list:
+    """Embed several texts in a single request (up to 100).
+
+    Used for procedure chunks, so approving a 20-step procedure
+    costs one API request instead of twenty.
+    """
+    response = _with_retry(
+        get_client().models.embed_content,
+        model=EMBEDDING_MODEL,
+        contents=texts
+    )
+
+    return [embedding.values for embedding in response.embeddings]
 
 def _json_config(temperature=None):
     # JSON mode forces Gemini to return valid JSON, so responses

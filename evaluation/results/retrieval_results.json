@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-09-25T13:26:17.833676+00:00",
+  "run_at": "2026-09-25T15:13:39.125096+00:00",
   "embedding_model": "gemini-embedding-001",
   "procedure_versions": {
     "1": 2,
