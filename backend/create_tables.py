@@ -42,6 +42,7 @@ if __name__ == "__main__":
             "ALTER TABLE gaps ADD COLUMN IF NOT EXISTS last_asked_at TIMESTAMPTZ;",
             "ALTER TABLE gaps ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;",
             "ALTER TABLE gaps ADD COLUMN IF NOT EXISTS resolved_by_procedure_id INTEGER;",
+            "ALTER TABLE gaps ADD COLUMN IF NOT EXISTS variants TEXT;",            
         ]:
             conn.execute(text(statement))
 

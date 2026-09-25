@@ -504,6 +504,27 @@ onMounted(loadGaps)
 
           </div>
 
+          <!-- Other wordings grouped into this gap -->
+          <div
+            v-if="selectedGap.variants && selectedGap.variants.length"
+            class="modal-section"
+          >
+
+            <span class="modal-label">
+              Also Asked As
+            </span>
+
+            <ul class="variant-list">
+              <li
+                v-for="variant in selectedGap.variants"
+                :key="variant"
+              >
+                {{ variant }}
+              </li>
+            </ul>
+
+          </div>
+
           <!-- Gap Information -->
           <div class="modal-grid">
 
@@ -1069,6 +1090,14 @@ onMounted(loadGaps)
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+.variant-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: #3d4b47;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .question-box {

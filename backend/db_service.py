@@ -267,6 +267,23 @@ def find_best_matching_procedure(question: str):
 
         return procedure, similarity
 
+def add_question_variant(
+    original: str,
+    variants: list,
+    question: str
+) -> list:
+    """Return variants with this wording added, unless it repeats
+    the original question or a wording already recorded (ignoring
+    case), so the list stays short and meaningful."""
+    known = {original.strip().lower()} | {
+        variant.strip().lower() for variant in variants
+    }
+
+    if question.strip().lower() in known:
+        return variants
+
+    return variants + [question.strip()]
+
 def log_gap(question: str, similarity: float):
     """Record an unanswered question, grouping it with an existing
     open gap when the two questions mean the same thing."""
@@ -290,6 +307,14 @@ def log_gap(question: str, similarity: float):
             gap = match[0]
             gap.frequency_count += 1
             gap.last_asked_at = now
+
+            # Keep this wording too, so a mistaken grouping never
+            # hides a different question from the owner.
+            gap.variants = json.dumps(add_question_variant(
+                gap.question,
+                json.loads(gap.variants) if gap.variants else [],
+                question
+            ))            
 
             # Track the closest the knowledge base has come.
             gap.similarity = max(gap.similarity or 0.0, float(similarity))
@@ -335,6 +360,7 @@ def get_gaps():
                 "question": gap.question,
                 "similarity": gap.similarity,
                 "frequency_count": gap.frequency_count,
+                "variants": json.loads(gap.variants) if gap.variants else [],
                 "status": gap.status,
                 "created_at": gap.created_at,
                 "last_asked_at": gap.last_asked_at or gap.created_at,

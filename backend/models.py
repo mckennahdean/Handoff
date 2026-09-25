@@ -141,6 +141,13 @@ class Gap(Base):
         nullable=True
     )
 
+    # JSON list of other wordings grouped into this gap, so a
+    # mistaken grouping never hides a question from the owner.
+    variants: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True
+    )
+
 
 class User(Base):
     __tablename__ = "users"

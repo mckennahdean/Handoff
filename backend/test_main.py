@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 from fastapi.testclient import TestClient
 from backend.auth_service import get_current_user
+from backend.db_service import add_question_variant, procedure_chunk_texts
 
 import backend.main as main_module
 import pytest
@@ -534,8 +535,6 @@ def test_retrieval_outage_returns_503(monkeypatch):
 
     assert response.status_code == 503
 
-from backend.db_service import procedure_chunk_texts
-
 def test_chunks_cover_every_step_and_warning_with_title():
     chunks = procedure_chunk_texts({
         "title": "Closing the Cafe",
@@ -548,3 +547,26 @@ def test_chunks_cover_every_step_and_warning_with_title():
         "Closing the Cafe: Count the till.",
         "Closing the Cafe: Never leave cash overnight."
     ]
+
+def test_variant_adds_a_new_wording():
+    assert add_question_variant(
+        "How often do we descale?",
+        [],
+        "What descaler do we use?"
+    ) == ["What descaler do we use?"]
+
+
+def test_variant_skips_repeats_ignoring_case():
+    variants = ["What descaler do we use?"]
+
+    assert add_question_variant(
+        "How often do we descale?",
+        variants,
+        "how often do we descale?"
+    ) == variants
+
+    assert add_question_variant(
+        "How often do we descale?",
+        variants,
+        "WHAT DESCALER DO WE USE?"
+    ) == variants
