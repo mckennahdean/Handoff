@@ -1,0 +1,13 @@
+# Coverage settings, used by pytest-cov locally and in CI.
+[run]
+source = backend
+omit =
+    # Test files are the measuring stick, not the thing measured.
+    backend/test_*.py
+    # Old manual scripts that are not part of the test suite.
+    backend/test.py
+    backend/test_embedding.py
+
+[report]
+show_missing = True
+skip_empty = True

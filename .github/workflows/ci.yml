@@ -25,10 +25,27 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run pytest
+      - name: Run pytest with coverage
         env:
           GEMINI_API_KEY: fake-key-for-ci
-        run: python -m pytest backend/ -v --no-header --ignore=backend/test.py --ignore=backend/test_embedding.py || [ $? -eq 5 ]
+        run: >
+          python -m pytest backend/ -v --no-header
+          --ignore=backend/test.py --ignore=backend/test_embedding.py
+          --cov=backend --cov-report=term-missing --cov-report=xml
+          --cov-fail-under=60
+
+      - name: Add coverage table to the job summary
+        if: always()
+        run: |
+          echo "## Backend test coverage" >> $GITHUB_STEP_SUMMARY
+          python -m coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
 
   frontend:
     name: Frontend lint and build
