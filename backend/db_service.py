@@ -5,10 +5,11 @@ from dotenv import load_dotenv
 from google import genai
 
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import case, select
 
 from backend.database import engine
 from backend.models import Procedure, Gap
+from backend.config import ANSWER_THRESHOLD, GAP_GROUPING_THRESHOLD
 
 from datetime import datetime, timezone
 from typing import Optional
@@ -21,21 +22,23 @@ client = genai.Client(
 )
 
 
+def embed_text(text: str) -> list:
+    embedding_response = client.models.embed_content(
+        model="gemini-embedding-001",
+        contents=text
+    )
+
+    return embedding_response.embeddings[0].values
+
+
 def create_embedding(procedure_data: dict) -> list:
-    text_for_embedding = (
+    return embed_text(
         procedure_data["title"]
         + " "
         + " ".join(procedure_data["steps"])
         + " "
         + " ".join(procedure_data["warnings"])
     )
-
-    embedding_response = client.models.embed_content(
-        model="gemini-embedding-001",
-        contents=text_for_embedding
-    )
-
-    return embedding_response.embeddings[0].values
 
 
 def save_draft(procedure_data: dict):
@@ -71,6 +74,7 @@ def save_procedure(
     With a procedure_id, approves that draft, or re-approves an
     edited procedure and increments its version. Without one,
     creates and approves a new procedure in one step.
+    Also resolves any open knowledge gaps the procedure now answers.
     Returns None if the procedure_id does not exist.
     """
     with Session(engine) as session:
@@ -94,10 +98,43 @@ def save_procedure(
         procedure.status = "approved"
         procedure.last_confirmed = datetime.now(timezone.utc)
 
+        # Gives a brand-new procedure its id before gaps link to it.
+        session.flush()
+
+        resolved_count = _resolve_gaps_covered_by(session, procedure)
+
         session.commit()
         session.refresh(procedure)
 
+        procedure.resolved_gap_count = resolved_count
+
         return procedure
+
+
+def _resolve_gaps_covered_by(session, procedure) -> int:
+    """Close open knowledge gaps that this procedure now answers.
+
+    Uses the same test as retrieval: if a gap's question would now
+    match this procedure above the answer threshold, it is resolved.
+    """
+    distance = Gap.embedding.cosine_distance(procedure.embedding)
+
+    covered_gaps = session.scalars(
+        select(Gap).where(
+            Gap.status == "open",
+            Gap.embedding.is_not(None),
+            distance <= 1 - ANSWER_THRESHOLD
+        )
+    ).all()
+
+    now = datetime.now(timezone.utc)
+
+    for gap in covered_gaps:
+        gap.status = "resolved"
+        gap.resolved_at = now
+        gap.resolved_by_procedure_id = procedure.id
+
+    return len(covered_gaps)
 
 
 def get_procedure(procedure_id: int):
@@ -192,13 +229,44 @@ def find_best_matching_procedure(question: str):
 
 
 def log_gap(question: str, similarity: float):
-    with Session(engine) as session:
-        gap = Gap(
-            question=question,
-            similarity=str(similarity)
-        )
+    """Record an unanswered question, grouping it with an existing
+    open gap when the two questions mean the same thing."""
+    question_embedding = embed_text(question)
+    now = datetime.now(timezone.utc)
 
-        session.add(gap)
+    with Session(engine) as session:
+        distance = Gap.embedding.cosine_distance(question_embedding)
+
+        match = session.execute(
+            select(Gap, distance.label("distance"))
+            .where(
+                Gap.status == "open",
+                Gap.embedding.is_not(None)
+            )
+            .order_by(distance)
+            .limit(1)
+        ).first()
+
+        if match is not None and 1 - match[1] >= GAP_GROUPING_THRESHOLD:
+            gap = match[0]
+            gap.frequency_count += 1
+            gap.last_asked_at = now
+
+            # Track the closest the knowledge base has come.
+            gap.similarity = max(gap.similarity or 0.0, float(similarity))
+
+        else:
+            gap = Gap(
+                question=question,
+                similarity=float(similarity),
+                embedding=question_embedding,
+                status="open",
+                created_at=now,
+                last_asked_at=now
+            )
+
+            session.add(gap)
+
         session.commit()
         session.refresh(gap)
 
@@ -207,13 +275,49 @@ def log_gap(question: str, similarity: float):
 
 def get_gaps():
     with Session(engine) as session:
-        gaps = session.query(Gap).all()
+        procedure_titles = dict(
+            session.execute(
+                select(Procedure.id, Procedure.title)
+            ).all()
+        )
+
+        gaps = session.scalars(
+            select(Gap).order_by(
+                # Open gaps first, then the most-asked, then the newest.
+                case((Gap.status == "open", 0), else_=1),
+                Gap.frequency_count.desc(),
+                Gap.last_asked_at.desc().nulls_last()
+            )
+        ).all()
 
         return [
             {
                 "id": gap.id,
                 "question": gap.question,
-                "similarity": gap.similarity
+                "similarity": gap.similarity,
+                "frequency_count": gap.frequency_count,
+                "status": gap.status,
+                "created_at": gap.created_at,
+                "last_asked_at": gap.last_asked_at or gap.created_at,
+                "resolved_at": gap.resolved_at,
+                "resolved_by_procedure_id": gap.resolved_by_procedure_id,
+                "resolved_by_title": procedure_titles.get(
+                    gap.resolved_by_procedure_id
+                )
             }
             for gap in gaps
         ]
+
+
+def dismiss_gap(gap_id: int):
+    with Session(engine) as session:
+        gap = session.get(Gap, gap_id)
+
+        if gap is None:
+            return None
+
+        gap.status = "dismissed"
+        gap.resolved_at = datetime.now(timezone.utc)
+        session.commit()
+
+        return gap_id

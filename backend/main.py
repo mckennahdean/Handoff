@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from backend.db_service import (
+    dismiss_gap,
     get_procedures,
     get_procedure,
     procedure_to_dict,
@@ -36,6 +37,7 @@ from backend.gemini_service import (
 from backend.auth_routes import router as auth_router
 from backend.auth_service import get_current_user, require_owner
 from backend.models import User
+from backend.config import ANSWER_THRESHOLD
 
 app = FastAPI()
 
@@ -391,6 +393,35 @@ def list_gaps():
             detail="Database error."
         )
 
+@app.post(
+    "/api/gaps/{gap_id}/dismiss",
+    dependencies=[Depends(require_owner)]
+)
+def dismiss_knowledge_gap(gap_id: int):
+    try:
+        dismissed = dismiss_gap(gap_id)
+
+    except Exception as error:
+        print(
+            "Gap dismiss error:",
+            error
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Database error."
+        )
+
+    if dismissed is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Gap not found."
+        )
+
+    return {
+        "status": "dismissed",
+        "gap_id": gap_id
+    }
 
 @app.post("/api/approve-procedure", dependencies=[Depends(require_owner)])
 def approve_procedure(
@@ -436,7 +467,8 @@ def approve_procedure(
         "procedure_id": saved.id,
         "title": saved.title,
         "version": saved.version,
-        "last_confirmed": saved.last_confirmed
+        "last_confirmed": saved.last_confirmed,
+        "resolved_gaps": getattr(saved, "resolved_gap_count", 0)
     }
 
 
@@ -489,9 +521,7 @@ def query_procedure(
             "gap_logged": True
         }
 
-    threshold = 0.70
-
-    if similarity < threshold:
+    if similarity < ANSWER_THRESHOLD:
         try:
             log_gap(
                 request.question,

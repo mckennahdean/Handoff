@@ -74,6 +74,7 @@ class Gap(Base):
         Text
     )
 
+    # Closest similarity any procedure reached for this question.
     similarity: Mapped[float] = mapped_column(
         Float
     )
@@ -83,9 +84,37 @@ class Gap(Base):
         default=1
     )
 
+    # Embedding of the question, used to group same-meaning
+    # questions and to detect when a new procedure answers it.
+    embedding: Mapped[Optional[list]] = mapped_column(
+        Vector(3072),
+        nullable=True
+    )
+
+    # open, resolved (a procedure now covers it), or dismissed.
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="open"
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=lambda: datetime.now(timezone.utc)
+    )
+
+    last_asked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime,
+        nullable=True
+    )
+
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime,
+        nullable=True
+    )
+
+    resolved_by_procedure_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True
     )
 
 

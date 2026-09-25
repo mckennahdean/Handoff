@@ -353,3 +353,62 @@ def test_approve_missing_draft_returns_404(monkeypatch):
     )
 
     assert response.status_code == 404
+
+    # ---------- Knowledge gaps ----------
+
+def test_answer_threshold_comes_from_config(monkeypatch):
+    monkeypatch.setattr(main_module, "ANSWER_THRESHOLD", 0.90)
+
+    monkeypatch.setattr(
+        main_module,
+        "find_best_matching_procedure",
+        lambda question: (fake_procedure("approved"), 0.85)
+    )
+
+    monkeypatch.setattr(
+        main_module,
+        "log_gap",
+        lambda question, similarity: None
+    )
+
+    response = client.post(
+        "/api/query",
+        json={"question": "What is the refund limit?"}
+    )
+
+    assert response.json()["status"] == "not_documented"
+
+
+def test_owner_can_dismiss_gap(monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "dismiss_gap",
+        lambda gap_id: gap_id
+    )
+
+    response = client.post("/api/gaps/3/dismiss")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "dismissed"
+
+
+def test_dismiss_missing_gap_returns_404(monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "dismiss_gap",
+        lambda gap_id: None
+    )
+
+    response = client.post("/api/gaps/999/dismiss")
+
+    assert response.status_code == 404
+
+
+def test_employee_cannot_dismiss_gap():
+    main_module.app.dependency_overrides[get_current_user] = (
+        lambda: FAKE_EMPLOYEE
+    )
+
+    response = client.post("/api/gaps/3/dismiss")
+
+    assert response.status_code == 403
