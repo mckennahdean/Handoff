@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { clearSession } from '../api.js'
 
 const router = useRouter()
 
@@ -22,8 +23,7 @@ const dashboardPath = computed(() => {
 
 // Log the user out of the frontend prototype.
 const logout = () => {
-  localStorage.removeItem('handoffUser')
-  localStorage.removeItem('userRole')
+  clearSession()
 
   // Return to the login screen.
   router.push('/login')
@@ -52,17 +52,9 @@ const logout = () => {
       <!-- Owner-only navigation -->
       <RouterLink
         v-if="isOwner"
-        to="/procedure-review"
-      >
-        Review Procedures
-      </RouterLink>
-
-      <!-- Owner-only navigation -->
-      <RouterLink
-        v-if="isOwner"
         to="/gaps"
       >
-        Documentation Gaps
+        Knowledge Gaps
       </RouterLink>
 
       <!-- Available to both Owners and Employees -->

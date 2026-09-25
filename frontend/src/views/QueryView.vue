@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import { apiFetch, errorMessage as apiErrorMessage } from '../api.js'
 
 const question = ref('')
 const hasAsked = ref(false)
@@ -7,7 +8,35 @@ const responseState = ref('')
 const isLoading = ref(false)
 const answer = ref('')
 const sourceProcedure = ref('')
+const lastConfirmed = ref('')
 const gapMessage = ref('')
+const gapLogged = ref(false)
+const errorText = ref('')
+
+const formatDate = (dateValue) => {
+  const date = new Date(dateValue)
+
+  if (Number.isNaN(date.getTime())) {
+    return dateValue
+  }
+
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
+const resetResult = () => {
+  hasAsked.value = false
+  responseState.value = ''
+  answer.value = ''
+  sourceProcedure.value = ''
+  lastConfirmed.value = ''
+  gapMessage.value = ''
+  gapLogged.value = false
+  errorText.value = ''
+}
 
 const askHandoff = async () => {
   if (!question.value.trim()) {
@@ -15,14 +44,10 @@ const askHandoff = async () => {
   }
 
   isLoading.value = true
-  hasAsked.value = false
-  responseState.value = ''
-  answer.value = ''
-  sourceProcedure.value = ''
-  gapMessage.value = ''
+  resetResult()
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/query', {
+    const response = await apiFetch('/api/query', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -32,43 +57,49 @@ const askHandoff = async () => {
       })
     })
 
-    if (!response.ok) {
-      throw new Error('Unable to get an answer from Handoff.')
-    }
-
     const data = await response.json()
+
+    if (!response.ok) {
+      // An outage is NOT an abstention: nothing was logged.
+      throw new Error(
+        apiErrorMessage(
+          data,
+          'Handoff could not answer right now. Please try again.'
+        )
+      )
+    }
 
     responseState.value = data.status
 
     if (data.status === 'answered') {
       answer.value = data.answer
       sourceProcedure.value = data.source_procedure
+      lastConfirmed.value = data.last_confirmed
     } else if (data.status === 'not_documented') {
       gapMessage.value =
         data.message ||
         'This information is not documented in the approved procedures.'
+      gapLogged.value = data.gap_logged === true
     }
-
-    hasAsked.value = true
   } catch (error) {
-    responseState.value = 'not_documented'
-    gapMessage.value =
-      'Handoff could not connect to the backend. Please try again.'
+    responseState.value = 'error'
 
-    hasAsked.value = true
+    // TypeError means the request never reached the server at all.
+    errorText.value =
+      error instanceof TypeError
+        ? 'Handoff could not reach the server. Please check your connection and try again.'
+        : error.message
+
     console.error(error)
   } finally {
+    hasAsked.value = true
     isLoading.value = false
   }
 }
 
 const clearQuestion = () => {
   question.value = ''
-  hasAsked.value = false
-  responseState.value = ''
-  answer.value = ''
-  sourceProcedure.value = ''
-  gapMessage.value = ''
+  resetResult()
 }
 
 const useExample = () => {
@@ -220,6 +251,12 @@ const useExample = () => {
               This procedure has been reviewed and approved
               by your organization's Owner.
             </p>
+            <p
+              v-if="lastConfirmed"
+              class="confirmed-date"
+            >
+              Last confirmed {{ formatDate(lastConfirmed) }}
+            </p>
           </div>
 
         </div>
@@ -270,12 +307,15 @@ const useExample = () => {
 
         <p>
           Instead of guessing, Handoff has identified this as
-          a potential documentation gap for the Owner to review.
+          a potential knowledge gap for the Owner to review.
         </p>
 
       </div>
 
-      <div class="gap-status">
+      <div
+        v-if="gapLogged"
+        class="gap-status"
+      >
 
         <div class="gap-status-icon">
           ✓
@@ -283,18 +323,63 @@ const useExample = () => {
 
         <div>
           <strong>
-            Documentation gap identified
+            Knowledge gap recorded
           </strong>
 
           <p>
-            This question has been recorded through the
-            documentation gap service.
+            This question has been recorded so the Owner can document it.
           </p>
         </div>
 
       </div>
 
+      <p
+        v-else
+        class="log-warning"
+      >
+        Handoff couldn't record this question automatically.
+        Please let your manager know you needed this information.
+      </p>
+      
     </section>
+
+    <section
+      v-if="hasAsked && responseState === 'error'"
+      class="response-card gap-card"
+    >
+
+      <div class="response-header">
+
+        <div class="gap-icon">
+          !
+        </div>
+
+        <div>
+          <p class="response-label">
+            Temporarily Unavailable
+          </p>
+
+          <h2>
+            Handoff couldn't answer right now.
+          </h2>
+        </div>
+
+      </div>
+
+      <div class="gap-content">
+
+        <p>
+          {{ errorText }}
+        </p>
+
+        <p>
+          This is a connection problem, not a missing procedure,
+          so nothing was logged. Please try again in a moment.
+        </p>
+
+      </div>
+
+    </section>    
 
     <section class="how-it-works">
 
@@ -357,9 +442,9 @@ const useExample = () => {
           </h3>
 
           <p>
-            Handoff provides a grounded answer or identifies
-            a documentation gap when the information is not
-            sufficiently documented.
+            Handoff provides a grounded answer or logs
+            a knowledge gap when the information is not
+            in an approved procedure.
           </p>
 
         </article>
@@ -800,6 +885,21 @@ const useExample = () => {
   color: #707d78;
   font-size: 12px;
   line-height: 1.6;
+}
+
+.confirmed-date {
+  margin-top: 4px;
+  color: #275b4f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+
+.log-warning {
+  margin: 12px 0 0;
+  color: #b3541e;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 @media (max-width: 760px) {

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { apiFetch } from '../api.js'
 
 const router = useRouter()
 
@@ -236,8 +237,8 @@ const uploadAudio = async (audioFile) => {
     audioFile
   )
 
-  const response = await fetch(
-    'http://127.0.0.1:8000/api/upload-audio',
+  const response = await apiFetch(
+    '/api/upload-audio',
     {
       method: 'POST',
       body: formData
@@ -263,8 +264,8 @@ const uploadAudio = async (audioFile) => {
 }
 
 const structureKnowledge = async (text) => {
-  const response = await fetch(
-    'http://127.0.0.1:8000/api/structure-procedure',
+  const response = await apiFetch(
+    '/api/structure-procedure',
     {
       method: 'POST',
       headers: {
@@ -311,7 +312,6 @@ const submitProcedure = async () => {
 
   try {
     let knowledgeText = ''
-    let audioFileName = null
 
     // -----------------------------------------
     // Manual Entry
@@ -329,10 +329,6 @@ const submitProcedure = async () => {
     if (captureMethod.value === 'upload') {
       message.value =
         'Transcribing uploaded audio...'
-
-      audioFileName =
-        selectedFile.value.name
-
       knowledgeText =
         await uploadAudio(
           selectedFile.value
@@ -374,9 +370,6 @@ const submitProcedure = async () => {
           }
         )
 
-      audioFileName =
-        recordedFile.name
-
       knowledgeText =
         await uploadAudio(
           recordedFile
@@ -391,41 +384,37 @@ const submitProcedure = async () => {
         knowledgeText
       )
 
-    const pendingProcedure = {
-      title: title.value.trim(),
-      aiSuggestedTitle:
-        structuredProcedure.title,
-      captureMethod:
-        captureMethod.value,
-      manualNotes:
-        manualNotes.value.trim(),
-      transcript:
-        knowledgeText,
-      audioFileName,
-      recordingDuration:
-        captureMethod.value === 'record'
-          ? formattedTime()
-          : null,
-      steps:
-        structuredProcedure.steps || [],
-      warnings:
-        structuredProcedure.warnings || [],
-      status: 'Pending Review'
-    }
+    // Save the AI-structured result as a pending draft in the
+    // database. Nothing becomes searchable until the owner approves.
+    const draftResponse = await apiFetch('/api/procedures/drafts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: title.value.trim() || structuredProcedure.title,
+        steps: structuredProcedure.steps || [],
+        warnings: structuredProcedure.warnings || [],
+        capture_method: captureMethod.value,
+        gap_questions: structuredProcedure.gap_questions || []
+      })
+    })
 
-    localStorage.setItem(
-      'pendingProcedure',
-      JSON.stringify(
-        pendingProcedure
+    const draft = await draftResponse.json()
+
+    if (!draftResponse.ok) {
+      throw new Error(
+        draft.detail || 'Unable to save the draft procedure.'
       )
-    )
+    }
 
     message.value =
       'Knowledge structured successfully. Opening Owner review...'
 
-    router.push(
-      '/procedure-review'
-    )
+    router.push({
+      path: '/procedure-review',
+      query: { id: draft.procedure_id }
+    })
   } catch (error) {
     console.error(error)
 

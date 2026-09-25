@@ -1,0 +1,709 @@
+{
+  "run_at": "2026-09-25T16:14:52.924727+00:00",
+  "text_model": "gemini-3.1-flash-lite",
+  "answer_threshold": 0.68,
+  "procedure_versions": {
+    "1": 2,
+    "2": 1,
+    "3": 2,
+    "4": 1,
+    "5": 1,
+    "6": 1,
+    "7": 1
+  },
+  "questions": [
+    {
+      "id": "q01",
+      "type": "direct",
+      "question": "What time does the cafe open?",
+      "expected": [
+        1
+      ],
+      "key_fact": "6:30 AM",
+      "procedure_id": 1,
+      "score": 0.7803,
+      "passes_threshold": true,
+      "answer": "The cafe opens at 6:30 AM.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.205,
+      "generate_seconds": 7.267
+    },
+    {
+      "id": "q02",
+      "type": "direct",
+      "question": "How much money should be in the till at opening?",
+      "expected": [
+        1,
+        2
+      ],
+      "key_fact": "$150",
+      "procedure_id": 1,
+      "score": 0.8374,
+      "passes_threshold": true,
+      "answer": "The till should hold $150 ($100 in small bills and $50 in coins).",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.198,
+      "generate_seconds": 4.013
+    },
+    {
+      "id": "q03",
+      "type": "direct",
+      "question": "How many times do I run the backflush cycle?",
+      "expected": [
+        3
+      ],
+      "key_fact": "Five times, 10 seconds on and 10 off",
+      "procedure_id": 3,
+      "score": 0.7865,
+      "passes_threshold": true,
+      "answer": "You run the backflush cycle five times with detergent, and then repeat the backflush cycle five times with plain water.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.203,
+      "generate_seconds": 5.811
+    },
+    {
+      "id": "q04",
+      "type": "direct",
+      "question": "What temperature should the milk fridge be?",
+      "expected": [
+        2,
+        4
+      ],
+      "key_fact": "41 degrees F or below",
+      "procedure_id": 2,
+      "score": 0.7726,
+      "passes_threshold": true,
+      "answer": "The milk fridge should be 41\u00b0F or below.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.182,
+      "generate_seconds": 2.506
+    },
+    {
+      "id": "q05",
+      "type": "direct",
+      "question": "How do I void an item?",
+      "expected": [
+        7
+      ],
+      "key_fact": "Select it and press Void before payment",
+      "procedure_id": 7,
+      "score": 0.7871,
+      "passes_threshold": true,
+      "answer": "To void an item, select the item on the order screen and press Void before the customer pays.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.194,
+      "generate_seconds": 20.3
+    },
+    {
+      "id": "q06",
+      "type": "direct",
+      "question": "Do refunds over $20 need approval?",
+      "expected": [
+        6,
+        7
+      ],
+      "key_fact": "Yes, a manager's approval code",
+      "procedure_id": 7,
+      "score": 0.8052,
+      "passes_threshold": true,
+      "answer": "Yes, for refunds over $20, obtain a manager's approval code.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.283,
+      "generate_seconds": 2.127
+    },
+    {
+      "id": "q07",
+      "type": "direct",
+      "question": "Where is the ingredient binder?",
+      "expected": [
+        5
+      ],
+      "key_fact": "Shelf under the register",
+      "procedure_id": 5,
+      "score": 0.7006,
+      "passes_threshold": true,
+      "answer": "The ingredient binder is stored on the shelf under the register, labeled \"Ingredients.\"",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.178,
+      "generate_seconds": 10.141
+    },
+    {
+      "id": "q08",
+      "type": "direct",
+      "question": "What time do we stop brewing batch coffee at night?",
+      "expected": [
+        2
+      ],
+      "key_fact": "5:45 PM",
+      "procedure_id": 2,
+      "score": 0.8037,
+      "passes_threshold": true,
+      "answer": "Stop brewing new batch coffee at 5:45 PM.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.267,
+      "generate_seconds": 2.099
+    },
+    {
+      "id": "q09",
+      "type": "direct",
+      "question": "Where do I put the signed invoice?",
+      "expected": [
+        4
+      ],
+      "key_fact": "The manager's tray",
+      "procedure_id": 4,
+      "score": 0.7165,
+      "passes_threshold": true,
+      "answer": "Leave the signed invoice in the manager's tray.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.291,
+      "generate_seconds": 7.882
+    },
+    {
+      "id": "q10",
+      "type": "direct",
+      "question": "What should I do if a customer has an allergic reaction?",
+      "expected": [
+        5
+      ],
+      "key_fact": "Call 911 first",
+      "procedure_id": 5,
+      "score": 0.8199,
+      "passes_threshold": true,
+      "answer": "If a customer has an allergic reaction, call 911 first, then the manager. Call 911 first, and never wait for a manager before calling. Then contact the manager on duty, who is listed on the weekly schedule in the office.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 3.18,
+      "generate_seconds": 4.402
+    },
+    {
+      "id": "q11",
+      "type": "paraphrase",
+      "question": "How much coffee goes into the first test shot of the morning?",
+      "expected": [
+        1
+      ],
+      "key_fact": "18 grams in, 36 grams out, 25 to 30 seconds",
+      "procedure_id": 1,
+      "score": 0.755,
+      "passes_threshold": true,
+      "answer": "18 grams of coffee.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.18,
+      "generate_seconds": 0.439
+    },
+    {
+      "id": "q12",
+      "type": "paraphrase",
+      "question": "The machine that makes shots won't power up. What do I check?",
+      "expected": [
+        1
+      ],
+      "key_fact": "The Espresso breaker and the water valve",
+      "procedure_id": 1,
+      "score": 0.7455,
+      "passes_threshold": true,
+      "answer": "If the machine won't turn on, check that the breaker labeled \"Espresso\" in the office electrical panel is on and that the water valve under the bar counter is open.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.231,
+      "generate_seconds": 2.242
+    },
+    {
+      "id": "q13",
+      "type": "paraphrase",
+      "question": "Can I use regular dish soap to clean the machine?",
+      "expected": [
+        3
+      ],
+      "key_fact": "No, it foams and leaves residue",
+      "procedure_id": 3,
+      "score": 0.7657,
+      "passes_threshold": true,
+      "answer": "Never substitute dish soap, because it foams and leaves residue inside the machine.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.181,
+      "generate_seconds": 1.366
+    },
+    {
+      "id": "q14",
+      "type": "paraphrase",
+      "question": "A customer says her latte tastes off and wants a new one. What do I do?",
+      "expected": [
+        6
+      ],
+      "key_fact": "Remake it free",
+      "procedure_id": 6,
+      "score": 0.7942,
+      "passes_threshold": true,
+      "answer": "To handle this, follow these steps:\n\n1. Listen to the whole complaint without interrupting, then apologize.\n2. Offer to remake the drink free of charge.\n3. Log the remake on the waste sheet (located on the clipboard behind the bar) with the reason for the remake.\n4. Remember: Never argue with the customer about whether the drink was made correctly.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.279,
+      "generate_seconds": 0.588
+    },
+    {
+      "id": "q15",
+      "type": "paraphrase",
+      "question": "Someone wants their money back for a bag of beans they bought last week.",
+      "expected": [
+        7
+      ],
+      "key_fact": "Unopened, within 14 days, with a receipt or a match",
+      "procedure_id": 7,
+      "score": 0.6913,
+      "passes_threshold": true,
+      "answer": "Unopened bags of coffee beans can be refunded within 14 days with a receipt or a match in Order History. To issue the refund, locate the original sale in Order History using the receipt number or the last four digits of the card. If you cannot find the sale, you cannot refund it. For card sales, process the refund back to the original card; for cash sales, process the refund from the drawer. If the refund is over $20, obtain a manager's approval code. Finally, print the refund receipt and provide it to the customer.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.256,
+      "generate_seconds": 2.478
+    },
+    {
+      "id": "q16",
+      "type": "paraphrase",
+      "question": "A guy lost his receipt and doesn't remember his card number. Can I still give him his money back?",
+      "expected": [
+        7
+      ],
+      "key_fact": "Search by date, time, and amount; if not found, offer a remake or drink card",
+      "procedure_id": 7,
+      "score": 0.7141,
+      "passes_threshold": true,
+      "answer": "Yes. Search Order History by the date, the approximate time, and the total amount. If you still can't find the sale, you can't refund it. Offer a free remake or a free drink card instead, and let the manager on duty know.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.177,
+      "generate_seconds": 5.307
+    },
+    {
+      "id": "q17",
+      "type": "paraphrase",
+      "question": "The truck brought fewer boxes of oat milk than we ordered. What do I do?",
+      "expected": [
+        4
+      ],
+      "key_fact": "Note it on the invoice, driver initials, text the manager",
+      "procedure_id": 4,
+      "score": 0.6932,
+      "passes_threshold": true,
+      "answer": "Check the delivery against the invoice, write the missing items on the invoice, ask the driver to initial the change, and text a photo of the invoice to the manager on duty.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.189,
+      "generate_seconds": 0.67
+    },
+    {
+      "id": "q18",
+      "type": "paraphrase",
+      "question": "How do I make sure someone who can't have nuts gets a safe drink?",
+      "expected": [
+        5
+      ],
+      "key_fact": "Allergy button, green-shelf pitcher, sealed syrups",
+      "procedure_id": 5,
+      "score": 0.761,
+      "passes_threshold": true,
+      "answer": "To ensure a customer with a nut allergy receives a safe drink, follow these steps:\n\n1. Repeat the allergy back to the customer.\n2. Press the 'Allergy' button on the register order.\n3. Press the Allergy button on each item that is for the customer with the allergy.\n4. Verbally alert the barista to the specific allergy and drink item.\n5. Use a clean pitcher from the green allergen shelf for alternative milks.\n6. Purge the steam wand for three seconds and wipe with a fresh cloth.\n7. Use only sealed syrup bottles, being aware that almond and hazelnut syrups contain tree nuts.\n8. After each use, wash the allergen pitcher in the back sink with hot, soapy water, rinse it, and let it air-dry on the green allergen shelf.\n9. Personally hand the drink to the customer and confirm the allergy by name.\n10. If uncertain about safety, present the ingredient binder at the register to the customer.\n\nAdditionally, never promise that an item is allergen-free, as our kitchen handles common allergens. Never put allergen pitchers in the dish bin with the regular pitchers.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.22,
+      "generate_seconds": 5.843
+    },
+    {
+      "id": "q19",
+      "type": "paraphrase",
+      "question": "What do I do with the leftover croissants at the end of the day?",
+      "expected": [
+        2
+      ],
+      "key_fact": "Log on the waste sheet and throw out",
+      "procedure_id": 2,
+      "score": 0.7279,
+      "passes_threshold": true,
+      "answer": "Log unsold pastries on the waste sheet and throw them out; nothing in the case carries over to the next day.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.224,
+      "generate_seconds": 32.774
+    },
+    {
+      "id": "q20",
+      "type": "paraphrase",
+      "question": "Where do the dirty rags go when I'm done cleaning the machine?",
+      "expected": [
+        3
+      ],
+      "key_fact": "Laundry bin in the back room",
+      "procedure_id": 3,
+      "score": 0.7257,
+      "passes_threshold": true,
+      "answer": "Put used cloths in the laundry bin in the back room and hang a clean cloth for the morning.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.237,
+      "generate_seconds": 7.744
+    },
+    {
+      "id": "q21",
+      "type": "paraphrase",
+      "question": "Should I shut off the espresso machine before I leave for the night?",
+      "expected": [
+        2,
+        3
+      ],
+      "key_fact": "No, leave it on",
+      "procedure_id": 3,
+      "score": 0.857,
+      "passes_threshold": true,
+      "answer": "Leave the machine on overnight.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.193,
+      "generate_seconds": 2.71
+    },
+    {
+      "id": "q22",
+      "type": "paraphrase",
+      "question": "Where's the sheet where we write down stuff we throw away?",
+      "expected": [
+        1,
+        2,
+        6
+      ],
+      "key_fact": "Clipboard behind the bar",
+      "procedure_id": 2,
+      "score": 0.7382,
+      "passes_threshold": true,
+      "answer": "The waste sheet is on the clipboard behind the bar.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.183,
+      "generate_seconds": 2.647
+    },
+    {
+      "id": "q23",
+      "type": "paraphrase",
+      "question": "The dairy that just came in feels warm. Should I take it?",
+      "expected": [
+        4
+      ],
+      "key_fact": "Reject anything above 41 degrees F",
+      "procedure_id": 4,
+      "score": 0.7548,
+      "passes_threshold": true,
+      "answer": "Check milk and dairy with the probe thermometer and reject anything above 41\u00b0F. Hand rejected items straight back to the driver before they leave; do not put them away.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.202,
+      "generate_seconds": 1.78
+    },
+    {
+      "id": "q24",
+      "type": "paraphrase",
+      "question": "The back door lock is broken and I'm trying to leave. What now?",
+      "expected": [
+        2
+      ],
+      "key_fact": "Never leave it unlocked; call the manager and wait",
+      "procedure_id": 2,
+      "score": 0.697,
+      "passes_threshold": true,
+      "answer": "If the back door won't lock, never leave the building unlocked. Call the manager and wait inside with the other closing employee until the manager or a locksmith arrives.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.188,
+      "generate_seconds": 4.418
+    },
+    {
+      "id": "q25",
+      "type": "paraphrase",
+      "question": "A customer complained about one of my coworkers and the boss isn't here.",
+      "expected": [
+        6
+      ],
+      "key_fact": "Sealed envelope in the manager's tray; text the manager",
+      "procedure_id": 6,
+      "score": 0.7412,
+      "passes_threshold": true,
+      "answer": "If the complaint is about an employee, thank the customer, write down the details, and give them to the manager that day. If the manager is not on-site, seal the written details in an envelope marked \"For the Manager\" and leave it in the manager's tray in the office. Then text the manager on duty that a complaint note is waiting. Do not discuss the complaint with the employee it is about.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.197,
+      "generate_seconds": 2.778
+    },
+    {
+      "id": "q26",
+      "type": "paraphrase",
+      "question": "How long can milk sit warm before I have to dump it?",
+      "expected": [
+        2,
+        4
+      ],
+      "key_fact": "4 hours above 41 degrees F",
+      "procedure_id": 2,
+      "score": 0.7434,
+      "passes_threshold": true,
+      "answer": "Throw out any milk that was above 41\u00b0F for more than 4 hours.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.19,
+      "generate_seconds": 1.82
+    },
+    {
+      "id": "q27",
+      "type": "paraphrase",
+      "question": "The walk-in cooler feels warm. What should I do?",
+      "expected": [
+        4
+      ],
+      "key_fact": "Check door and fan, recheck in 30 minutes, move dairy to the milk fridge",
+      "procedure_id": 4,
+      "score": 0.7607,
+      "passes_threshold": true,
+      "answer": "If the walk-in temperature is above 41\u00b0F, make sure the door closes fully and the fan inside is running, then check again after 30 minutes. If it is still above 41\u00b0F, move the milk and dairy to the milk fridge under the bar, write the temperature on the temperature log, and tell the manager on duty, who will call the refrigeration repair company.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.209,
+      "generate_seconds": 6.7
+    },
+    {
+      "id": "q28",
+      "type": "paraphrase",
+      "question": "The little fridge under the bar says 45 degrees at close. What do I do?",
+      "expected": [
+        2
+      ],
+      "key_fact": "Check door and vent, recheck in 30 minutes, move milk to the walk-in",
+      "procedure_id": 2,
+      "score": 0.7733,
+      "passes_threshold": true,
+      "answer": "Make sure the fridge door is fully closed and nothing is blocking the vent, then check again after 30 minutes. If it is still above 41\u00b0F, move all the milk to the walk-in overnight, write the problem on the temperature log, and tell the manager on duty.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.192,
+      "generate_seconds": 5.772
+    },
+    {
+      "id": "q29",
+      "type": "near_miss",
+      "question": "How often should we descale the espresso machine?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 3,
+      "score": 0.7224,
+      "passes_threshold": true,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "refused_by_generation_gate",
+      "embed_seconds": 0.197,
+      "generate_seconds": 2.318
+    },
+    {
+      "id": "q30",
+      "type": "near_miss",
+      "question": "How do I replace the grinder burrs?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 1,
+      "score": 0.6704,
+      "passes_threshold": false,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "blocked_by_threshold_gate",
+      "embed_seconds": 0.244,
+      "generate_seconds": 14.668
+    },
+    {
+      "id": "q31",
+      "type": "near_miss",
+      "question": "What's the Wi-Fi password for customers?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 1,
+      "score": 0.6207,
+      "passes_threshold": false,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "blocked_by_threshold_gate",
+      "embed_seconds": 0.208,
+      "generate_seconds": 12.854
+    },
+    {
+      "id": "q32",
+      "type": "near_miss",
+      "question": "How do I request time off?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 1,
+      "score": 0.5948,
+      "passes_threshold": false,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "blocked_by_threshold_gate",
+      "embed_seconds": 0.216,
+      "generate_seconds": 3.439
+    },
+    {
+      "id": "q33",
+      "type": "near_miss",
+      "question": "How is the tip pool split each week?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 1,
+      "score": 0.5971,
+      "passes_threshold": false,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "blocked_by_threshold_gate",
+      "embed_seconds": 0.206,
+      "generate_seconds": 8.372
+    },
+    {
+      "id": "q34",
+      "type": "near_miss",
+      "question": "How do I check the balance on a customer's gift card?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 7,
+      "score": 0.6335,
+      "passes_threshold": false,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "blocked_by_threshold_gate",
+      "embed_seconds": 0.169,
+      "generate_seconds": 1.303
+    },
+    {
+      "id": "q35",
+      "type": "near_miss",
+      "question": "How do we handle a large catering order for an office?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 4,
+      "score": 0.649,
+      "passes_threshold": false,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "blocked_by_threshold_gate",
+      "embed_seconds": 0.324,
+      "generate_seconds": 3.157
+    },
+    {
+      "id": "q36",
+      "type": "near_miss",
+      "question": "How do I make the seasonal pumpkin spice syrup?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 5,
+      "score": 0.6575,
+      "passes_threshold": false,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "blocked_by_threshold_gate",
+      "embed_seconds": 0.19,
+      "generate_seconds": 2.884
+    },
+    {
+      "id": "q37",
+      "type": "near_miss",
+      "question": "What's the recipe for a cortado?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 1,
+      "score": 0.6312,
+      "passes_threshold": false,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "blocked_by_threshold_gate",
+      "embed_seconds": 0.215,
+      "generate_seconds": 5.931
+    },
+    {
+      "id": "q38",
+      "type": "near_miss",
+      "question": "How do I clock in at the start of my shift?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 1,
+      "score": 0.6505,
+      "passes_threshold": false,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "blocked_by_threshold_gate",
+      "embed_seconds": 0.202,
+      "generate_seconds": 5.916
+    },
+    {
+      "id": "q39",
+      "type": "off_topic",
+      "question": "What time is it?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 1,
+      "score": 0.545,
+      "passes_threshold": false,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "blocked_by_threshold_gate",
+      "embed_seconds": 0.242,
+      "generate_seconds": 2.141
+    },
+    {
+      "id": "q40",
+      "type": "off_topic",
+      "question": "Who won the game last night?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 2,
+      "score": 0.5191,
+      "passes_threshold": false,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "blocked_by_threshold_gate",
+      "embed_seconds": 0.4,
+      "generate_seconds": 2.636
+    },
+    {
+      "id": "q41",
+      "type": "off_topic",
+      "question": "Can you help me write a cover letter?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 6,
+      "score": 0.5542,
+      "passes_threshold": false,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "blocked_by_threshold_gate",
+      "embed_seconds": 0.188,
+      "generate_seconds": 3.607
+    },
+    {
+      "id": "q42",
+      "type": "off_topic",
+      "question": "What's the weather tomorrow?",
+      "expected": [],
+      "key_fact": null,
+      "procedure_id": 4,
+      "score": 0.5271,
+      "passes_threshold": false,
+      "answer": "This information is not documented in the retrieved procedure.",
+      "refused": true,
+      "outcome": "blocked_by_threshold_gate",
+      "embed_seconds": 0.22,
+      "generate_seconds": 3.862
+    }
+  ]
+}

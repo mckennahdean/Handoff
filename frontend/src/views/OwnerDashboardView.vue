@@ -1,23 +1,117 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { apiFetch, getCurrentUser, errorMessage } from '../api.js'
 
 const router = useRouter()
 
-// Temporary prototype data.
-// These numbers will eventually come from the Handoff backend.
-const procedureCount = ref(12)
-const pendingReviews = ref(3)
-const documentationGaps = ref(5)
+// The signed-in owner, saved at login.
+const user = getCurrentUser() || { name: 'Owner' }
 
-// Gets the current user's information from the frontend prototype session.
-const storedUser = localStorage.getItem('handoffUser')
+// Dashboard statistics loaded from the Handoff backend.
+const procedureCount = ref('...')
+const documentationGaps = ref('...')
 
-const user = storedUser
-  ? JSON.parse(storedUser)
-  : {
-      name: 'Owner'
+const pendingReviews = ref('...')
+
+// Invite code the owner shares with new employees.
+const businessName = ref('')
+const inviteCode = ref('')
+const inviteMessage = ref('')
+
+const loadStats = async () => {
+  try {
+    // Request both at the same time instead of one after the other.
+    const [proceduresResponse, gapsResponse] = await Promise.all([
+      apiFetch('/api/procedures'),
+      apiFetch('/api/gaps')
+    ])
+
+    if (proceduresResponse.ok) {
+      const procedures = await proceduresResponse.json()
+
+      procedureCount.value = procedures.filter(
+        (procedure) => procedure.status === 'approved'
+      ).length
+
+      pendingReviews.value = procedures.filter(
+        (procedure) => procedure.status === 'pending'
+      ).length
     }
+
+    if (gapsResponse.ok) {
+      const gaps = await gapsResponse.json()
+
+      documentationGaps.value = gaps.filter(
+        (gap) => gap.status === 'open'
+      ).length
+    }
+  } catch {
+    // Keep the placeholders if the server cannot be reached.
+  }
+}
+
+const loadInviteCode = async () => {
+  try {
+    const response = await apiFetch('/api/business/invite-code')
+    const data = await response.json()
+
+    if (!response.ok) {
+      inviteMessage.value = errorMessage(data, 'Unable to load invite code.')
+      return
+    }
+
+    businessName.value = data.business_name
+    inviteCode.value = data.invite_code
+  } catch {
+    inviteMessage.value = 'Unable to reach the Handoff server.'
+  }
+}
+
+const copyInviteCode = async () => {
+  try {
+    await navigator.clipboard.writeText(inviteCode.value)
+    inviteMessage.value = 'Invite code copied.'
+  } catch {
+    inviteMessage.value = 'Copy failed. Please copy the code manually.'
+  }
+}
+
+const regenerateInviteCode = async () => {
+  const confirmed = window.confirm(
+    'Create a new invite code? The current code will stop working ' +
+    'immediately. Existing employee accounts are not affected.'
+  )
+
+  if (!confirmed) {
+    return
+  }
+
+  try {
+    const response = await apiFetch(
+      '/api/business/invite-code/regenerate',
+      { method: 'POST' }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      inviteMessage.value = errorMessage(data, 'Unable to create a new code.')
+      return
+    }
+
+    inviteCode.value = data.invite_code
+    inviteMessage.value =
+      'New invite code created. The old code no longer works.'
+  } catch {
+    inviteMessage.value = 'Unable to reach the Handoff server.'
+  }
+}
+
+onMounted(() => {
+  loadStats()
+  loadInviteCode()
+})
 
 // Navigate to a specific Handoff feature.
 const goTo = (path) => {
@@ -64,7 +158,7 @@ const goTo = (path) => {
       <!-- Reviews -->
       <button
         class="stat-card"
-        @click="goTo('/procedure-review')"
+        @click="goTo('/procedures')"
       >
         <span class="stat-label">Pending Reviews</span>
         <strong>{{ pendingReviews }}</strong>
@@ -73,7 +167,7 @@ const goTo = (path) => {
         </span>
       </button>
 
-      <!-- Documentation gaps -->
+      <!-- Knowledge gaps -->
       <button
         class="stat-card"
         @click="goTo('/gaps')"
@@ -84,6 +178,48 @@ const goTo = (path) => {
           Questions that need documentation
         </span>
       </button>
+
+    </section>
+
+    <!-- Team access: invite code for new employees -->
+    <section class="section">
+
+      <div class="section-heading">
+        <h2>Team Access</h2>
+
+        <p>
+          Share this code with new employees so they can create
+          their {{ businessName || 'Handoff' }} account.
+        </p>
+      </div>
+
+      <div class="invite-card">
+        <span class="invite-code">
+          {{ inviteCode || '........' }}
+        </span>
+
+        <div class="invite-actions">
+          <button
+            type="button"
+            class="invite-button"
+            @click="copyInviteCode"
+          >
+            Copy Code
+          </button>
+
+          <button
+            type="button"
+            class="invite-button secondary"
+            @click="regenerateInviteCode"
+          >
+            New Code
+          </button>
+        </div>
+      </div>
+
+      <p v-if="inviteMessage" class="invite-message">
+        {{ inviteMessage }}
+      </p>
 
     </section>
 
@@ -123,7 +259,7 @@ const goTo = (path) => {
         <!-- Review -->
         <button
           class="action-card"
-          @click="goTo('/procedure-review')"
+          @click="goTo('/procedures')"
         >
           <div class="action-icon">
             ✓
@@ -149,7 +285,7 @@ const goTo = (path) => {
           </div>
 
           <div>
-            <h3>Documentation Gaps</h3>
+            <h3>Knowledge Gaps</h3>
 
             <p>
               See questions Handoff could not answer and
@@ -179,14 +315,6 @@ const goTo = (path) => {
 
       </div>
 
-    </section>
-
-    <!-- Prototype notice -->
-    <section class="prototype-note">
-      <strong>Prototype:</strong>
-      Dashboard statistics and account information are
-      currently simulated and will be connected to the
-      Handoff backend during integration.
     </section>
 
   </main>
@@ -396,28 +524,68 @@ const goTo = (path) => {
   line-height: 1.55;
 }
 
-
 /* =========================================
-   Prototype Notice
+   Team Access / Invite Code
    ========================================= */
 
-.prototype-note {
-  max-width: 1150px;
-  margin: 35px auto 0;
-  padding: 14px 18px;
-  box-sizing: border-box;
-  border-radius: 8px;
+.invite-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px;
+  border: 1px solid #d8d2c8;
+  border-radius: 14px;
   background: #ffffff;
-  color: #777777;
-  font-size: 12px;
-  line-height: 1.5;
 }
 
 
-.prototype-note strong {
+.invite-code {
   color: #275b4f;
+  font-family: 'Courier New', monospace;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 6px;
 }
 
+
+.invite-actions {
+  display: flex;
+  gap: 10px;
+}
+
+
+.invite-button {
+  padding: 11px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #275b4f;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+
+.invite-button.secondary {
+  border: 1px solid #d26f3d;
+  background: #ffffff;
+  color: #d26f3d;
+}
+
+
+.invite-button:hover {
+  opacity: 0.9;
+}
+
+
+.invite-message {
+  margin: 12px 0 0;
+  color: #275b4f;
+  font-size: 13px;
+}
 
 /* =========================================
    Tablet

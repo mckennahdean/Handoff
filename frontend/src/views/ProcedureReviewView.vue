@@ -1,73 +1,235 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { apiFetch, errorMessage as apiErrorMessage } from '../api.js'
 
+const route = useRoute()
 const router = useRouter()
 
-const storedProcedure = localStorage.getItem('pendingProcedure')
+// The procedure under review, identified by ?id= in the URL.
+const procedureId = Number(route.query.id)
 
-const pendingProcedure = storedProcedure
-  ? JSON.parse(storedProcedure)
-  : null
+const title = ref('')
+const steps = ref([])
+const warnings = ref([])
+const captureMethod = ref(null)
+const status = ref('')
+const version = ref(1)
+const isLoading = ref(true)
+const loadError = ref('')
 
-const title = ref(
-  pendingProcedure?.title || 'Customer Returns'
+// AI gap detection. Each gap is one follow-up question from the
+// AI with a status: open, merged, manual, or not_applicable.
+const gaps = ref([])
+const isMerging = ref(false)
+const gapMessage = ref('')
+
+// Snapshot taken before an AI merge, so the owner can undo it.
+const undoSnapshot = ref(null)
+
+const openGaps = computed(() =>
+  gaps.value.filter((gap) => gap.status === 'open')
 )
 
-const captureDescription = computed(() => {
-  if (pendingProcedure?.captureMethod === 'upload') {
-    return `Captured using Uploaded audio${
-      pendingProcedure.audioFileName
-        ? ` — ${pendingProcedure.audioFileName}`
-        : ''
-    }`
+const answeredOpenGaps = computed(() =>
+  openGaps.value.filter((gap) => gap.answer.trim())
+)
+
+const allGapsResolved = computed(() => openGaps.value.length === 0)
+
+// The procedure as it was loaded (or last approved), used to tell
+// whether the owner has actually edited anything. Cleaned the same
+// way approveProcedure cleans it, so adding and then deleting a
+// blank step, or trailing spaces, does not count as a change.
+const savedContent = ref('')
+
+const contentSnapshot = () =>
+  JSON.stringify({
+    title: title.value.trim(),
+    steps: steps.value
+      .map((step) => step.trim())
+      .filter((step) => step.length > 0),
+    warnings: warnings.value
+      .map((warning) => warning.trim())
+      .filter((warning) => warning.length > 0)
+  })
+
+const hasChanges = computed(() => contentSnapshot() !== savedContent.value)
+
+// Drafts can be approved once every gap is resolved. An approved
+// procedure can only be re-approved if something changed, so its
+// version number never goes up for nothing.
+const canApprove = computed(() =>
+  allGapsResolved.value &&
+  (status.value !== 'approved' || hasChanges.value)
+)
+
+const resolutionLabel = (status) => {
+  const labels = {
+    merged: '✓ Incorporated with AI',
+    manual: '✓ Owner will add manually',
+    not_applicable: '✓ Marked not applicable'
   }
 
-  if (pendingProcedure?.captureMethod === 'manual') {
-    return 'Captured using Manual knowledge entry'
+  return labels[status] || ''
+}
+
+const incorporateWithAI = async () => {
+  const answered = answeredOpenGaps.value
+
+  if (answered.length === 0) {
+    gapMessage.value = 'Type an answer for at least one question first.'
+    return
   }
 
-  if (pendingProcedure?.captureMethod === 'record') {
-    const duration = pendingProcedure.recordingDuration
+  isMerging.value = true
+  gapMessage.value = ''
 
-    if (duration) {
-      return `Captured using Owner recording — ${duration}`
+  try {
+    const response = await apiFetch('/api/procedures/merge-answers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: title.value,
+        steps: steps.value,
+        warnings: warnings.value,
+        answers: answered.map((gap) => ({
+          question: gap.question,
+          answer: gap.answer.trim()
+        }))
+      })
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(
+        apiErrorMessage(data, 'Handoff could not incorporate the answers.')
+      )
     }
 
+    undoSnapshot.value = {
+      steps: [...steps.value],
+      warnings: [...warnings.value],
+      statuses: gaps.value.map((gap) => gap.status)
+    }
+
+    steps.value = data.steps
+    warnings.value = data.warnings
+
+    answered.forEach((gap) => {
+      gap.status = 'merged'
+    })
+
+    gapMessage.value =
+      'Answers incorporated. Review the new steps below before approving.'
+  } catch (error) {
+    gapMessage.value = error.message
+  } finally {
+    isMerging.value = false
+  }
+}
+
+const undoMerge = () => {
+  if (!undoSnapshot.value) {
+    return
+  }
+
+  steps.value = undoSnapshot.value.steps
+  warnings.value = undoSnapshot.value.warnings
+
+  gaps.value.forEach((gap, index) => {
+    gap.status = undoSnapshot.value.statuses[index]
+  })
+
+  undoSnapshot.value = null
+  gapMessage.value = 'AI changes undone. Your answers are still here.'
+}
+
+const addItMyself = () => {
+  openGaps.value.forEach((gap) => {
+    gap.status = 'manual'
+  })
+
+  gapMessage.value =
+    'Marked as handled. Edit the steps below to add the missing details.'
+}
+
+const markNotApplicable = (gap) => {
+  gap.status = 'not_applicable'
+}
+
+const reopenGap = (gap) => {
+  gap.status = 'open'
+}
+
+const captureDescription = computed(() => {
+  if (captureMethod.value === 'upload') {
+    return 'Captured using uploaded audio'
+  }
+
+  if (captureMethod.value === 'manual') {
+    return 'Captured using manual knowledge entry'
+  }
+
+  if (captureMethod.value === 'record') {
     return 'Captured using Owner recording'
   }
 
-  return 'Captured using Owner recording'
+  return 'Capture method not recorded'
 })
 
-const steps = ref(
-  Array.isArray(pendingProcedure?.steps) &&
-  pendingProcedure.steps.length > 0
-    ? [...pendingProcedure.steps]
-    : [
-        'Verify the customer and original purchase information.',
-        'Confirm that the item meets the return requirements.',
-        'Process the return using the approved return method.',
-        'Provide the customer with the appropriate confirmation.'
-      ]
-)
+// Load the procedure from the database, so the review page shows
+// the real content even after a refresh or a browser restart.
+const loadProcedure = async () => {
+  if (!procedureId) {
+    loadError.value =
+      'No procedure selected. Open one from the Procedures page.'
+    isLoading.value = false
+    return
+  }
 
-const warnings = ref(
-  Array.isArray(pendingProcedure?.warnings)
-    ? [...pendingProcedure.warnings]
-    : [
-        'Items outside the return policy require Owner review.',
-        'Refunds should not be issued until the return requirements are verified.'
-      ]
-)
+  try {
+    const response = await apiFetch(`/api/procedures/${procedureId}`)
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.detail || 'Unable to load procedure.')
+    }
+
+    title.value = data.title
+    steps.value = [...data.steps]
+    warnings.value = [...data.warnings]
+    captureMethod.value = data.capture_method
+    status.value = data.status
+    version.value = data.version
+    savedContent.value = contentSnapshot()
+    approvedLastConfirmed.value = data.last_confirmed
+    // Gap questions only apply while a procedure is a pending draft.
+    gaps.value =
+      data.status === 'pending'
+        ? data.gap_questions.map((question) => ({
+            question,
+            answer: '',
+            status: 'open'
+          }))
+        : []
+  } catch (error) {
+    loadError.value = error.message || 'Unable to load procedure.'
+  } finally {
+    isLoading.value = false
+  }
+}
 
 const showChangesModal = ref(false)
 const changesComment = ref('')
 const message = ref('')
-const errorMessage = ref('')
 const isSubmitting = ref(false)
 const approvedLastConfirmed = ref(null)
-
+const resolvedGapCount = ref(0)
+const errorMessage = ref('')
 const addStep = () => {
   steps.value.push('')
 }
@@ -118,6 +280,17 @@ const approveProcedure = async () => {
     return
   }
 
+  if (!allGapsResolved.value) {
+    errorMessage.value =
+      'Resolve every gap question before approving.'
+    return
+  }
+
+  if (status.value === 'approved' && !hasChanges.value) {
+    errorMessage.value = 'Edit a step or warning before approving changes.'
+    return
+  }
+
   message.value = ''
   errorMessage.value = ''
 
@@ -146,14 +319,15 @@ const approveProcedure = async () => {
   isSubmitting.value = true
 
   try {
-    const response = await fetch(
-      'http://127.0.0.1:8000/api/approve-procedure',
+    const response = await apiFetch(
+      '/api/approve-procedure',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          procedure_id: procedureId,
           title: cleanTitle,
           steps: cleanSteps,
           warnings: cleanWarnings
@@ -175,7 +349,10 @@ const approveProcedure = async () => {
     approvedLastConfirmed.value =
       data.last_confirmed || null
 
-    localStorage.removeItem('pendingProcedure')
+    status.value = 'approved'
+    version.value = data.version
+    savedContent.value = contentSnapshot()
+    resolvedGapCount.value = data.resolved_gaps || 0
 
     message.value = 'Procedure approved successfully.'
   } catch (error) {
@@ -220,6 +397,7 @@ const formattedLastConfirmed = computed(() => {
     day: 'numeric'
   })
 })
+onMounted(loadProcedure)
 </script>
 
 <template>
@@ -306,7 +484,32 @@ const formattedLastConfirmed = computed(() => {
       </div>
     </section>
 
-    <section class="procedure-card">
+    <section
+      v-if="isLoading"
+      class="success-message"
+    >
+      <div>
+        <strong>Loading procedure...</strong>
+      </div>
+    </section>
+
+    <section
+      v-if="loadError"
+      class="error-message"
+    >
+      <span class="error-icon">!</span>
+
+      <div>
+        <strong>Unable to load procedure</strong>
+
+        <p>{{ loadError }}</p>
+      </div>
+    </section>
+
+    <section
+      v-if="!isLoading && !loadError"
+      class="procedure-card"
+    >
 
       <div class="procedure-header">
         <div>
@@ -323,9 +526,114 @@ const formattedLastConfirmed = computed(() => {
 
         <div class="version">
           <span>Version</span>
-          <strong>1.0</strong>
+          <strong>{{ version }}.0</strong>
         </div>
       </div>
+
+      <!-- AI gap detection: what the owner may have skipped -->
+      <section
+        v-if="gaps.length > 0"
+        class="gap-section"
+      >
+        <div class="gap-heading">
+          <div>
+            <h3>Handoff Noticed Possible Gaps</h3>
+
+            <p>
+              Experts often skip steps they do automatically.
+              Answer these so new employees are not left guessing.
+            </p>
+          </div>
+
+          <span class="gap-count">
+            {{ openGaps.length }} of {{ gaps.length }} open
+          </span>
+        </div>
+
+        <div
+          v-for="(gap, index) in gaps"
+          :key="index"
+          class="gap-card"
+          :class="{ resolved: gap.status !== 'open' }"
+        >
+          <p class="gap-question">{{ gap.question }}</p>
+
+          <template v-if="gap.status === 'open'">
+            <textarea
+              v-model="gap.answer"
+              rows="2"
+              placeholder="Your answer..."
+            ></textarea>
+
+            <button
+              type="button"
+              class="gap-link"
+              @click="markNotApplicable(gap)"
+            >
+              Not Applicable
+            </button>
+          </template>
+
+          <div
+            v-else
+            class="gap-resolution"
+          >
+            <span>{{ resolutionLabel(gap.status) }}</span>
+
+            <span
+              v-if="gap.answer.trim()"
+              class="gap-answer"
+            >
+              Your answer: {{ gap.answer }}
+            </span>
+
+            <button
+              type="button"
+              class="gap-link"
+              @click="reopenGap(gap)"
+            >
+              Reopen
+            </button>
+          </div>
+        </div>
+
+        <div class="gap-actions">
+          <button
+            type="button"
+            class="primary-button"
+            :disabled="isMerging || answeredOpenGaps.length === 0"
+            @click="incorporateWithAI"
+          >
+            {{ isMerging ? 'Incorporating...' : 'Incorporate with AI' }}
+          </button>
+
+          <button
+            type="button"
+            class="secondary-button"
+            :disabled="isMerging || openGaps.length === 0"
+            @click="addItMyself"
+          >
+            I'll Add It Myself
+          </button>
+
+          <button
+            v-if="undoSnapshot"
+            type="button"
+            class="secondary-button"
+            :disabled="isMerging"
+            @click="undoMerge"
+          >
+            Undo AI Changes
+          </button>
+        </div>
+
+        <p
+          v-if="gapMessage"
+          class="gap-message"
+        >
+          {{ gapMessage }}
+        </p>
+      </section>
 
       <section class="content-section">
         <div class="section-heading">
@@ -451,7 +759,7 @@ const formattedLastConfirmed = computed(() => {
 
           <strong>
             {{
-              isApproved
+              isApproved || status === 'approved'
                 ? 'Available to employees'
                 : 'Owner review required'
             }}
@@ -487,13 +795,17 @@ const formattedLastConfirmed = computed(() => {
             v-if="!isApproved"
             type="button"
             class="primary-button"
-            :disabled="isSubmitting"
+            :disabled="isSubmitting || !canApprove"
             @click="approveProcedure"
           >
             {{
               isSubmitting
                 ? 'Approving...'
-                : 'Approve Procedure'
+                : status !== 'approved'
+                  ? 'Approve Procedure'
+                  : hasChanges
+                    ? `Approve Changes (v${version + 1})`
+                    : 'No Changes to Approve'
             }}
           </button>
 
@@ -527,6 +839,11 @@ const formattedLastConfirmed = computed(() => {
           <p>
             Employees can now access this procedure through
             Approved Procedures and Ask Handoff.
+          </p>
+          <p v-if="resolvedGapCount > 0">
+            This procedure also resolved {{ resolvedGapCount }}
+            knowledge {{ resolvedGapCount === 1 ? 'gap' : 'gaps' }}
+            that employees had asked about.
           </p>
         </div>
       </div>
@@ -1107,12 +1424,23 @@ textarea:disabled {
 .close-button {
   width: 32px;
   height: 32px;
+  flex: 0 0 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
   border: 0;
   border-radius: 50%;
   background: #f3eee8;
   color: #53635d;
   font-size: 21px;
+  line-height: 1;
   cursor: pointer;
+}
+
+.close-button:hover {
+  background: #e9e2da;
+  box-shadow: none;
+  transform: none;
 }
 
 .modal-description {
@@ -1135,6 +1463,133 @@ textarea:disabled {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+/* =========================================
+   Gap Detection
+   ========================================= */
+
+.gap-section {
+  margin: 24px 0;
+  padding: 22px;
+  border: 1px solid #f0c9b3;
+  border-radius: 14px;
+  background: #fdf6f1;
+}
+
+
+.gap-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+
+.gap-heading h3 {
+  margin: 0 0 6px;
+  color: #275b4f;
+}
+
+
+.gap-heading p {
+  margin: 0;
+  color: #6b6b6b;
+  font-size: 14px;
+}
+
+
+.gap-count {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #d26f3d;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+
+.gap-card {
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e6ddd2;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+
+.gap-card.resolved {
+  opacity: 0.75;
+}
+
+
+.gap-question {
+  margin: 0 0 10px;
+  color: #333333;
+  font-weight: 600;
+}
+
+
+.gap-card textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #d8d2c8;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+
+.gap-link {
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #d26f3d;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+
+.gap-resolution {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #275b4f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+
+.gap-resolution .gap-link {
+  align-self: flex-start;
+}
+
+
+.gap-answer {
+  color: #6b6b6b;
+  font-weight: 400;
+}
+
+
+.gap-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+
+.gap-message {
+  margin: 12px 0 0;
+  color: #275b4f;
+  font-size: 13px;
 }
 
 @media (max-width: 760px) {

@@ -20,3 +20,11 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Evaluation embedding cache (large, regenerable)
+evaluation/cache/
+
+# Coverage output (regenerated on every run)
+.coverage
+coverage.xml
+htmlcov/

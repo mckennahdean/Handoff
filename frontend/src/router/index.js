@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { isLoggedIn } from '../api.js'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -137,12 +138,12 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   // Retrieve the prototype session information.
+  const loggedIn = isLoggedIn()
   const role = localStorage.getItem('userRole')
-  const user = localStorage.getItem('handoffUser')
 
   // Prevent unauthenticated users from accessing
   // pages that require a logged-in user.
-  if (to.meta.requiresAuth && !user) {
+  if (to.meta.requiresAuth && !loggedIn) {
     return '/login'
   }
 
@@ -174,7 +175,7 @@ router.beforeEach((to) => {
   // appropriate dashboard.
   if (
     (to.name === 'login' || to.name === 'signup') &&
-    user
+    loggedIn
   ) {
     if (role === 'owner') {
       return '/owner-dashboard'

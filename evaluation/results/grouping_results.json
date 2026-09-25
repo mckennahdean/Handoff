@@ -1,0 +1,471 @@
+{
+  "run_at": "2026-09-25T15:34:19.892287+00:00",
+  "embedding_model": "gemini-embedding-001",
+  "current_threshold": 0.75,
+  "best": {
+    "threshold": 0.73,
+    "accuracy": 0.9,
+    "false_merges": 3,
+    "missed_groups": 0
+  },
+  "sweep": [
+    {
+      "threshold": 0.6,
+      "accuracy": 0.6667,
+      "false_merges": 10,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.61,
+      "accuracy": 0.7,
+      "false_merges": 9,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.62,
+      "accuracy": 0.7,
+      "false_merges": 9,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.63,
+      "accuracy": 0.7667,
+      "false_merges": 7,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.64,
+      "accuracy": 0.7667,
+      "false_merges": 7,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.65,
+      "accuracy": 0.7667,
+      "false_merges": 7,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.66,
+      "accuracy": 0.7667,
+      "false_merges": 7,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.67,
+      "accuracy": 0.7667,
+      "false_merges": 7,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.68,
+      "accuracy": 0.8,
+      "false_merges": 6,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.69,
+      "accuracy": 0.8333,
+      "false_merges": 5,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.7,
+      "accuracy": 0.8333,
+      "false_merges": 5,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.71,
+      "accuracy": 0.8667,
+      "false_merges": 4,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.72,
+      "accuracy": 0.8667,
+      "false_merges": 4,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.73,
+      "accuracy": 0.9,
+      "false_merges": 3,
+      "missed_groups": 0
+    },
+    {
+      "threshold": 0.74,
+      "accuracy": 0.8667,
+      "false_merges": 3,
+      "missed_groups": 1
+    },
+    {
+      "threshold": 0.75,
+      "accuracy": 0.8333,
+      "false_merges": 3,
+      "missed_groups": 2
+    },
+    {
+      "threshold": 0.76,
+      "accuracy": 0.8333,
+      "false_merges": 3,
+      "missed_groups": 2
+    },
+    {
+      "threshold": 0.77,
+      "accuracy": 0.8333,
+      "false_merges": 3,
+      "missed_groups": 2
+    },
+    {
+      "threshold": 0.78,
+      "accuracy": 0.8333,
+      "false_merges": 2,
+      "missed_groups": 3
+    },
+    {
+      "threshold": 0.79,
+      "accuracy": 0.8,
+      "false_merges": 2,
+      "missed_groups": 4
+    },
+    {
+      "threshold": 0.8,
+      "accuracy": 0.8333,
+      "false_merges": 1,
+      "missed_groups": 4
+    },
+    {
+      "threshold": 0.81,
+      "accuracy": 0.8333,
+      "false_merges": 0,
+      "missed_groups": 5
+    },
+    {
+      "threshold": 0.82,
+      "accuracy": 0.8,
+      "false_merges": 0,
+      "missed_groups": 6
+    },
+    {
+      "threshold": 0.83,
+      "accuracy": 0.7333,
+      "false_merges": 0,
+      "missed_groups": 8
+    },
+    {
+      "threshold": 0.84,
+      "accuracy": 0.7,
+      "false_merges": 0,
+      "missed_groups": 9
+    },
+    {
+      "threshold": 0.85,
+      "accuracy": 0.7,
+      "false_merges": 0,
+      "missed_groups": 9
+    },
+    {
+      "threshold": 0.86,
+      "accuracy": 0.6667,
+      "false_merges": 0,
+      "missed_groups": 10
+    },
+    {
+      "threshold": 0.87,
+      "accuracy": 0.6667,
+      "false_merges": 0,
+      "missed_groups": 10
+    },
+    {
+      "threshold": 0.88,
+      "accuracy": 0.6667,
+      "false_merges": 0,
+      "missed_groups": 10
+    },
+    {
+      "threshold": 0.89,
+      "accuracy": 0.6667,
+      "false_merges": 0,
+      "missed_groups": 10
+    },
+    {
+      "threshold": 0.9,
+      "accuracy": 0.6333,
+      "false_merges": 0,
+      "missed_groups": 11
+    },
+    {
+      "threshold": 0.91,
+      "accuracy": 0.5667,
+      "false_merges": 0,
+      "missed_groups": 13
+    },
+    {
+      "threshold": 0.92,
+      "accuracy": 0.5667,
+      "false_merges": 0,
+      "missed_groups": 13
+    },
+    {
+      "threshold": 0.93,
+      "accuracy": 0.5333,
+      "false_merges": 0,
+      "missed_groups": 14
+    },
+    {
+      "threshold": 0.94,
+      "accuracy": 0.5,
+      "false_merges": 0,
+      "missed_groups": 15
+    },
+    {
+      "threshold": 0.95,
+      "accuracy": 0.5,
+      "false_merges": 0,
+      "missed_groups": 15
+    }
+  ],
+  "pairs": [
+    {
+      "id": "p01",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "How often should we descale the espresso machine?",
+      "b": "When is the espresso machine supposed to be descaled?",
+      "similarity": 0.9034
+    },
+    {
+      "id": "p02",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "How do I replace the grinder burrs?",
+      "b": "What's the process for swapping out the burrs on the grinder?",
+      "similarity": 0.9027
+    },
+    {
+      "id": "p03",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "What's the Wi-Fi password for customers?",
+      "b": "A customer is asking for the wifi code, what is it?",
+      "similarity": 0.8935
+    },
+    {
+      "id": "p04",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "How do I request time off?",
+      "b": "Who do I ask if I need a day off next week?",
+      "similarity": 0.7831
+    },
+    {
+      "id": "p05",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "How is the tip pool split each week?",
+      "b": "How do tips get divided between the staff?",
+      "similarity": 0.8585
+    },
+    {
+      "id": "p06",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "How do I check the balance on a customer's gift card?",
+      "b": "Can I look up how much money is left on a gift card?",
+      "similarity": 0.8248
+    },
+    {
+      "id": "p07",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "How do we handle a large catering order for an office?",
+      "b": "An office wants 40 coffees delivered Friday, how do we handle that?",
+      "similarity": 0.8302
+    },
+    {
+      "id": "p08",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "How do I make the seasonal pumpkin spice syrup?",
+      "b": "What's the recipe for our pumpkin spice syrup?",
+      "similarity": 0.9273
+    },
+    {
+      "id": "p09",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "How do I clock in at the start of my shift?",
+      "b": "Where do I punch in when I get to work?",
+      "similarity": 0.8274
+    },
+    {
+      "id": "p10",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "What's the dress code for baristas?",
+      "b": "What am I allowed to wear on shift?",
+      "similarity": 0.7473
+    },
+    {
+      "id": "p11",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "Where should employees park?",
+      "b": "Is there a staff parking spot?",
+      "similarity": 0.806
+    },
+    {
+      "id": "p12",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "What are our holiday hours?",
+      "b": "Are we open on Thanksgiving?",
+      "similarity": 0.7775
+    },
+    {
+      "id": "p13",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "Do we have a loyalty or rewards program?",
+      "b": "Can customers earn points toward free drinks?",
+      "similarity": 0.7339
+    },
+    {
+      "id": "p14",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "What's the recipe for a cortado?",
+      "b": "How do I make a cortado?",
+      "similarity": 0.9377
+    },
+    {
+      "id": "p15",
+      "kind": "paraphrase",
+      "same": true,
+      "a": "How much extra do we charge for oat milk?",
+      "b": "Is there an upcharge for alternative milk?",
+      "similarity": 0.811
+    },
+    {
+      "id": "p16",
+      "kind": "hard_negative",
+      "same": false,
+      "a": "How often should we descale the espresso machine?",
+      "b": "What descaling solution do we use?",
+      "similarity": 0.7783
+    },
+    {
+      "id": "p17",
+      "kind": "hard_negative",
+      "same": false,
+      "a": "How do I replace the grinder burrs?",
+      "b": "Where do we order replacement grinder parts?",
+      "similarity": 0.7913
+    },
+    {
+      "id": "p18",
+      "kind": "hard_negative",
+      "same": false,
+      "a": "What's the Wi-Fi password for customers?",
+      "b": "What's the password for the register login?",
+      "similarity": 0.7089
+    },
+    {
+      "id": "p19",
+      "kind": "hard_negative",
+      "same": false,
+      "a": "How do I request time off?",
+      "b": "How do I swap a shift with a coworker?",
+      "similarity": 0.6704
+    },
+    {
+      "id": "p20",
+      "kind": "hard_negative",
+      "same": false,
+      "a": "How is the tip pool split each week?",
+      "b": "When is payday?",
+      "similarity": 0.5877
+    },
+    {
+      "id": "p21",
+      "kind": "hard_negative",
+      "same": false,
+      "a": "How do I check the balance on a customer's gift card?",
+      "b": "How do I sell a gift card?",
+      "similarity": 0.6898
+    },
+    {
+      "id": "p22",
+      "kind": "hard_negative",
+      "same": false,
+      "a": "How do I make the seasonal pumpkin spice syrup?",
+      "b": "When does the pumpkin spice latte come back on the menu?",
+      "similarity": 0.7277
+    },
+    {
+      "id": "p23",
+      "kind": "hard_negative",
+      "same": false,
+      "a": "What's the dress code for baristas?",
+      "b": "Where do I get a new apron?",
+      "similarity": 0.6259
+    },
+    {
+      "id": "p24",
+      "kind": "hard_negative",
+      "same": false,
+      "a": "Do we have a loyalty or rewards program?",
+      "b": "How do I check the balance on a customer's gift card?",
+      "similarity": 0.5779
+    },
+    {
+      "id": "p25",
+      "kind": "hard_negative",
+      "same": false,
+      "a": "What are our holiday hours?",
+      "b": "How do I request time off?",
+      "similarity": 0.6057
+    },
+    {
+      "id": "p26",
+      "kind": "hard_negative",
+      "same": false,
+      "a": "How much extra do we charge for oat milk?",
+      "b": "Do we sell oat milk by the carton?",
+      "similarity": 0.8067
+    },
+    {
+      "id": "p27",
+      "kind": "hard_negative",
+      "same": false,
+      "a": "How do we handle a large catering order for an office?",
+      "b": "Can customers place orders online?",
+      "similarity": 0.6233
+    },
+    {
+      "id": "p28",
+      "kind": "unrelated",
+      "same": false,
+      "a": "Where should employees park?",
+      "b": "What's the Wi-Fi password for customers?",
+      "similarity": 0.5906
+    },
+    {
+      "id": "p29",
+      "kind": "unrelated",
+      "same": false,
+      "a": "How do I clock in at the start of my shift?",
+      "b": "What's the recipe for a cortado?",
+      "similarity": 0.4921
+    },
+    {
+      "id": "p30",
+      "kind": "unrelated",
+      "same": false,
+      "a": "What time is it?",
+      "b": "What's the weather tomorrow?",
+      "similarity": 0.5897
+    }
+  ]
+}

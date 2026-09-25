@@ -2,18 +2,25 @@ import os
 import shutil
 import tempfile
 
+
 from fastapi import (
     FastAPI,
     UploadFile,
     File,
-    HTTPException
+    HTTPException,
+    Depends
 )
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 from backend.db_service import (
+    dismiss_gap,
+    delete_procedure,
     get_procedures,
+    get_procedure,
+    procedure_to_dict,
+    save_draft,
     save_procedure,
     find_best_matching_procedure,
     log_gap,
@@ -22,10 +29,18 @@ from backend.db_service import (
 
 from backend.gemini_service import (
     structure_procedure,
+    merge_gap_answers,
+    MergeAlteredContentError,
     answer_question_from_procedure,
-    transcribe_audio
+    transcribe_audio,
+    NOT_DOCUMENTED_REPLY
 )
 
+from backend.auth_routes import router as auth_router
+from backend.auth_service import get_current_user, require_owner
+from backend.models import User
+from backend.config import ANSWER_THRESHOLD
+from backend.config import CORS_ORIGINS
 
 app = FastAPI()
 
@@ -33,15 +48,13 @@ app = FastAPI()
 # Allow the Vue frontend to communicate with FastAPI during development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
 
 # Audio upload settings
 SUPPORTED_AUDIO_EXTENSIONS = {
@@ -69,12 +82,32 @@ class ProcedureResponse(BaseModel):
     title: str
     steps: List[str]
     warnings: List[str]
+    gap_questions: List[str] = []
 
 
 class ApprovedProcedure(BaseModel):
+    procedure_id: Optional[int] = None
     title: str
     steps: List[str]
     warnings: List[str]
+
+class DraftProcedure(BaseModel):
+    title: str
+    steps: List[str]
+    warnings: List[str]
+    capture_method: Optional[str] = None
+    gap_questions: List[str] = []
+
+class GapAnswer(BaseModel):
+    question: str
+    answer: str
+
+
+class MergeRequest(BaseModel):
+    title: str
+    steps: List[str]
+    warnings: List[str]
+    answers: List[GapAnswer]
 
 
 @app.get("/")
@@ -84,7 +117,7 @@ def home():
     }
 
 
-@app.post("/api/upload-audio")
+@app.post("/api/upload-audio", dependencies=[Depends(require_owner)])
 def upload_audio(
     audio_file: UploadFile = File(...)
 ):
@@ -210,9 +243,14 @@ def create_structure(
 
 
 @app.get("/api/procedures")
-def list_procedures():
+def list_procedures(
+    user: User = Depends(get_current_user)
+):
     try:
-        return get_procedures()
+        # Employees only ever see approved procedures.
+        return get_procedures(
+            include_pending=user.role == "owner"
+        )
 
     except Exception as error:
         print(
@@ -226,7 +264,120 @@ def list_procedures():
         )
 
 
-@app.get("/api/gaps")
+@app.get("/api/procedures/{procedure_id}")
+def get_procedure_detail(
+    procedure_id: int,
+    user: User = Depends(get_current_user)
+):
+    try:
+        procedure = get_procedure(procedure_id)
+
+    except Exception as error:
+        print(
+            "Database error:",
+            error
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Database error."
+        )
+
+    # Employees get 404 for drafts, not 403, so the response
+    # does not reveal that an unapproved draft exists.
+    if (
+        procedure is None
+        or (
+            procedure.status != "approved"
+            and user.role != "owner"
+        )
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="Procedure not found."
+        )
+
+    return procedure_to_dict(procedure)
+
+
+@app.post(
+    "/api/procedures/drafts",
+    status_code=201,
+    dependencies=[Depends(require_owner)]
+)
+def create_draft(draft: DraftProcedure):
+    if not draft.title.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Procedure title cannot be empty."
+        )
+
+    try:
+        saved = save_draft(draft.model_dump())
+
+    except Exception as error:
+        print(
+            "Draft save error:",
+            error
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Database error."
+        )
+
+    return {
+        "procedure_id": saved.id,
+        "status": saved.status
+    }
+
+@app.post(
+    "/api/procedures/merge-answers",
+    dependencies=[Depends(require_owner)]
+)
+def merge_answers(request: MergeRequest):
+    answered = [
+        answer.model_dump()
+        for answer in request.answers
+        if answer.answer.strip()
+    ]
+
+    if not answered:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide at least one answer to incorporate."
+        )
+
+    try:
+        return merge_gap_answers(
+            request.title,
+            request.steps,
+            request.warnings,
+            answered
+        )
+
+    except MergeAlteredContentError:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Handoff's AI tried to change your existing steps, "
+                "so the merge was cancelled. Try again, or choose "
+                "I'll Add It Myself."
+            )
+        )
+
+    except Exception as error:
+        print(
+            "Merge error:",
+            error
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="LLM service error."
+        )
+
+@app.get("/api/gaps", dependencies=[Depends(require_owner)])
 def list_gaps():
     try:
         return get_gaps()
@@ -242,8 +393,68 @@ def list_gaps():
             detail="Database error."
         )
 
+@app.post(
+    "/api/gaps/{gap_id}/dismiss",
+    dependencies=[Depends(require_owner)]
+)
+def dismiss_knowledge_gap(gap_id: int):
+    try:
+        dismissed = dismiss_gap(gap_id)
 
-@app.post("/api/approve-procedure")
+    except Exception as error:
+        print(
+            "Gap dismiss error:",
+            error
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Database error."
+        )
+
+    if dismissed is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Gap not found."
+        )
+
+    return {
+        "status": "dismissed",
+        "gap_id": gap_id
+    }
+
+@app.delete(
+    "/api/procedures/{procedure_id}",
+    dependencies=[Depends(require_owner)]
+)
+def delete_procedure_route(procedure_id: int):
+    try:
+        reopened = delete_procedure(procedure_id)
+
+    except Exception as error:
+        print(
+            "Procedure delete error:",
+            error
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Database error."
+        )
+
+    if reopened is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Procedure not found."
+        )
+
+    return {
+        "status": "deleted",
+        "procedure_id": procedure_id,
+        "gaps_reopened": reopened
+    }
+
+@app.post("/api/approve-procedure", dependencies=[Depends(require_owner)])
 def approve_procedure(
     procedure: ApprovedProcedure
 ):
@@ -261,15 +472,9 @@ def approve_procedure(
 
     try:
         saved = save_procedure(
-            procedure.model_dump()
+            procedure.model_dump(exclude={"procedure_id"}),
+            procedure.procedure_id
         )
-
-        return {
-            "status": "approved",
-            "procedure_id": saved.id,
-            "title": saved.title,
-            "last_confirmed": saved.last_confirmed
-        }
 
     except Exception as error:
         print(
@@ -282,23 +487,60 @@ def approve_procedure(
             detail="Database or embedding service error."
         )
 
+    if saved is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Procedure not found."
+        )
 
-@app.post("/api/query")
+    return {
+        "status": "approved",
+        "procedure_id": saved.id,
+        "title": saved.title,
+        "version": saved.version,
+        "last_confirmed": saved.last_confirmed,
+        "resolved_gaps": getattr(saved, "resolved_gap_count", 0)
+    }
+
+def abstain(question: str, similarity, message: str) -> dict:
+    """Decline to answer, and record the question as a knowledge gap."""
+    try:
+        log_gap(question, similarity or 0.0)
+        gap_logged = True
+
+    except Exception as error:
+        print(
+            "Gap logging error:",
+            error
+        )
+
+        gap_logged = False
+
+    response = {
+        "status": "not_documented",
+        "message": message,
+        "gap_logged": gap_logged
+    }
+
+    if similarity is not None:
+        response["similarity"] = similarity
+
+    return response
+
+@app.post("/api/query", dependencies=[Depends(get_current_user)])
 def query_procedure(
     request: QueryRequest
 ):
-    if not request.question.strip():
+    question = request.question.strip()
+
+    if not question:
         raise HTTPException(
             status_code=400,
             detail="Question cannot be empty."
         )
 
     try:
-        procedure, similarity = (
-            find_best_matching_procedure(
-                request.question
-            )
-        )
+        procedure, similarity = find_best_matching_procedure(question)
 
     except Exception as error:
         print(
@@ -307,60 +549,30 @@ def query_procedure(
         )
 
         raise HTTPException(
-            status_code=500,
-            detail="Embedding or retrieval service error."
+            status_code=503,
+            detail=(
+                "Handoff could not search the knowledge base right now. "
+                "Please try again in a moment."
+            )
         )
 
+    # Threshold Gate: no approved procedure is close enough.
     if procedure is None:
-        try:
-            log_gap(
-                request.question,
-                0.0
-            )
+        return abstain(
+            question,
+            None,
+            "No approved procedures exist yet."
+        )
 
-        except Exception as error:
-            print(
-                "Gap logging error:",
-                error
-            )
-
-        return {
-            "status": "not_documented",
-            "message": (
-                "No matching procedure was found."
-            ),
-            "gap_logged": True
-        }
-
-    threshold = 0.70
-
-    if similarity < threshold:
-        try:
-            log_gap(
-                request.question,
-                similarity
-            )
-
-        except Exception as error:
-            print(
-                "Gap logging error:",
-                error
-            )
-
-        return {
-            "status": "not_documented",
-            "message": (
-                "This information is not currently documented."
-            ),
-            "similarity": similarity,
-            "gap_logged": True
-        }
+    if similarity < ANSWER_THRESHOLD:
+        return abstain(
+            question,
+            similarity,
+            "This information is not currently documented."
+        )
 
     try:
-        answer = answer_question_from_procedure(
-            request.question,
-            procedure
-        )
+        answer = answer_question_from_procedure(question, procedure)
 
     except Exception as error:
         print(
@@ -369,8 +581,20 @@ def query_procedure(
         )
 
         raise HTTPException(
-            status_code=500,
-            detail="LLM service error."
+            status_code=503,
+            detail=(
+                "Handoff could not generate an answer right now. "
+                "Please try again in a moment."
+            )
+        )
+
+    # Generation Gate: the closest procedure is related,
+    # but the AI found it does not contain this answer.
+    if NOT_DOCUMENTED_REPLY.lower() in answer.lower():
+        return abstain(
+            question,
+            similarity,
+            "The closest procedure does not cover this question."
         )
 
     return {

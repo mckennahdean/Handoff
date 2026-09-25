@@ -10,6 +10,20 @@ jobs:
   backend:
     name: Backend tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: handoff_test
+          POSTGRES_USER: handoff_user
+          POSTGRES_PASSWORD: handoff_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U handoff_user -d handoff_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -25,10 +39,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run pytest
+      - name: Run pytest with coverage
         env:
           GEMINI_API_KEY: fake-key-for-ci
-        run: python -m pytest backend/ -v --no-header --ignore=backend/test.py --ignore=backend/test_embedding.py || [ $? -eq 5 ]
+          TEST_DATABASE_URL: postgresql+psycopg://handoff_user:handoff_password@localhost:5432/handoff_test
+        run: >
+          python -m pytest backend/ -v --no-header
+          --ignore=backend/test.py --ignore=backend/test_embedding.py
+          --cov=backend --cov-report=term-missing --cov-report=xml
+          --cov-fail-under=70
+
+      - name: Add coverage table to the job summary
+        if: always()
+        run: |
+          echo "## Backend test coverage" >> $GITHUB_STEP_SUMMARY
+          python -m coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
 
   frontend:
     name: Frontend lint and build
@@ -69,3 +101,76 @@ jobs:
         if: steps.check.outputs.has_frontend == 'true'
         working-directory: frontend
         run: npm run build
+
+  docker:
+    name: Docker build, smoke test, and publish
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Build backend and frontend images
+        run: docker compose build
+
+      - name: Start the full stack and wait until healthy
+        run: docker compose up -d --wait --wait-timeout 120
+
+      - name: Smoke test the running containers
+        run: |
+          curl --fail --silent --show-error http://localhost:8000/
+          curl --fail --silent --show-error --output /dev/null http://localhost:8080/
+          curl --fail --silent --show-error --output /dev/null http://localhost:8080/procedures
+          echo "Backend and frontend both responded."
+
+      - name: Add image sizes to the job summary
+        run: |
+          echo "## Docker images" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          docker images --format "table {{.Repository}}\t{{.Size}}" | grep -E "REPOSITORY|handoff" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Log in to GitHub Container Registry
+        # Pull requests from forks get a read-only token; skip publishing there.
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Publish the smoke-tested images
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          OWNER: ${{ github.repository_owner }}
+          EVENT: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          owner=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+          short_sha=${COMMIT::7}
+
+          if [ "$EVENT" = "pull_request" ]; then
+            extra_tag="pr-$PR_NUMBER"
+          else
+            extra_tag="latest"
+          fi
+
+          echo "## Published images" >> $GITHUB_STEP_SUMMARY
+
+          for service in backend frontend; do
+            image="ghcr.io/$owner/handoff-$service"
+
+            for tag in "sha-$short_sha" "$extra_tag"; do
+              docker tag "handoff-$service" "$image:$tag"
+              docker push "$image:$tag"
+              echo "- \`$image:$tag\`" >> $GITHUB_STEP_SUMMARY
+            done
+          done
+
+      - name: Show container logs if anything failed
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v
