@@ -1,3 +1,14 @@
+# Handoff: the whole app with one command.
+#
+#   Full app:          docker compose up --build -d
+#                      then open http://localhost:8080
+#   Database only      docker compose up -d db
+#   (local dev):       then run uvicorn and npm run dev yourself
+#   Stop:              docker compose down
+#                      (data is kept; "down -v" would DELETE it)
+#
+# Settings and secrets come from .env at run time, never from images.
+
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -6,10 +17,63 @@ services:
       POSTGRES_DB: handoff
       POSTGRES_USER: handoff_user
       POSTGRES_PASSWORD: handoff_password
+    # Published so local development and tests can reach it.
+    # A production deployment would not expose the database.
     ports:
       - "5432:5432"
     volumes:
       - handoff_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U handoff_user -d handoff"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: handoff-backend
+    container_name: handoff-backend
+    # Your settings (API key, JWT secret, thresholds), wherever your
+    # .env lives. Missing files are skipped instead of failing.
+    env_file:
+      - path: .env
+        required: false
+      - path: backend/.env
+        required: false
+    # These override .env for the containerized setup.
+    environment:
+      # Inside Docker's network the database is "db", not localhost.
+      DATABASE_URL: postgresql+psycopg://handoff_user:handoff_password@db:5432/handoff
+      CORS_ORIGINS: http://localhost:8080,http://localhost:5173
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # The browser calls the API through this published port.
+        VITE_API_URL: http://localhost:8000
+    image: handoff-frontend
+    container_name: handoff-frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   handoff_data:
