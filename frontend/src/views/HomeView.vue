@@ -47,7 +47,7 @@
           </RouterLink>
 
           <RouterLink to="/gaps" class="button secondary">
-            Documentation Gaps
+            Knowledge Gaps
           </RouterLink>
         </div>
       </div>

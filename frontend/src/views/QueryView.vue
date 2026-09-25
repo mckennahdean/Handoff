@@ -442,9 +442,9 @@ const useExample = () => {
           </h3>
 
           <p>
-            Handoff provides a grounded answer or identifies
-            a documentation gap when the information is not
-            sufficiently documented.
+            Handoff provides a grounded answer or logs
+            a knowledge gap when the information is not
+            in an approved procedure.
           </p>
 
         </article>
