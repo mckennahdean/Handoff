@@ -47,7 +47,7 @@ jobs:
           python -m pytest backend/ -v --no-header
           --ignore=backend/test.py --ignore=backend/test_embedding.py
           --cov=backend --cov-report=term-missing --cov-report=xml
-          --cov-fail-under=60
+          --cov-fail-under=70
 
       - name: Add coverage table to the job summary
         if: always()
