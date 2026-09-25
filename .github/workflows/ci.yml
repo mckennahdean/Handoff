@@ -101,3 +101,38 @@ jobs:
         if: steps.check.outputs.has_frontend == 'true'
         working-directory: frontend
         run: npm run build
+
+  docker:
+    name: Docker build and smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Build backend and frontend images
+        run: docker compose build
+
+      - name: Start the full stack and wait until healthy
+        run: docker compose up -d --wait --wait-timeout 120
+
+      - name: Smoke test the running containers
+        run: |
+          curl --fail --silent --show-error http://localhost:8000/
+          curl --fail --silent --show-error --output /dev/null http://localhost:8080/
+          curl --fail --silent --show-error --output /dev/null http://localhost:8080/procedures
+          echo "Backend and frontend both responded."
+
+      - name: Add image sizes to the job summary
+        run: |
+          echo "## Docker images" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          docker images --format "table {{.Repository}}\t{{.Size}}" | grep -E "REPOSITORY|handoff" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Show container logs if anything failed
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v
