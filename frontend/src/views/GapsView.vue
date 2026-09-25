@@ -154,6 +154,9 @@ const dismissGap = async (gap) => {
 
     closeDetails()
     actionMessage.value = 'Gap dismissed.'
+    setTimeout(() => {
+      actionMessage.value = ''
+    }, 4000)
     await loadGaps()
   } catch (error) {
     actionMessage.value = error.message
@@ -1070,12 +1073,23 @@ onMounted(loadGaps)
 .close-button {
   width: 32px;
   height: 32px;
+  flex: 0 0 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
   border: 0;
   border-radius: 50%;
   background: #f3eee8;
   color: #53635d;
   font-size: 21px;
+  line-height: 1;
   cursor: pointer;
+}
+
+.close-button:hover {
+  background: #e9e2da;
+  box-shadow: none;
+  transform: none;
 }
 
 .modal-section {
@@ -1274,7 +1288,11 @@ onMounted(loadGaps)
 
 
 .action-message {
-  margin: 0 0 16px;
+  max-width: 1120px;
+  margin: 0 auto 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #e9f2ef;
   color: #275b4f;
   font-weight: 600;
 }
