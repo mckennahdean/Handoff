@@ -570,3 +570,26 @@ def test_variant_skips_repeats_ignoring_case():
         variants,
         "WHAT DESCALER DO WE USE?"
     ) == variants
+
+def test_cors_allows_the_dev_frontend():
+    response = client.options(
+        "/api/procedures",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "GET"
+        }
+    )
+
+    assert response.headers["access-control-allow-origin"] == (
+        "http://localhost:5173"
+    )
+
+def test_cors_origins_come_from_config():
+    assert main_module.CORS_ORIGINS is not None
+
+    cors = next(
+        middleware for middleware in main_module.app.user_middleware
+        if middleware.cls.__name__ == "CORSMiddleware"
+    )
+
+    assert cors.kwargs["allow_origins"] is main_module.CORS_ORIGINS

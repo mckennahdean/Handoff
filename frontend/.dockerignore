@@ -1,0 +1,8 @@
+# Installed and built inside the image, never copied from Windows.
+node_modules
+dist
+.eslintcache
+
+# Secrets never go into an image.
+.env
+.env.*

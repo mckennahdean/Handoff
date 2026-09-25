@@ -40,6 +40,7 @@ from backend.auth_routes import router as auth_router
 from backend.auth_service import get_current_user, require_owner
 from backend.models import User
 from backend.config import ANSWER_THRESHOLD
+from backend.config import CORS_ORIGINS
 
 app = FastAPI()
 
@@ -47,10 +48,7 @@ app = FastAPI()
 # Allow the Vue frontend to communicate with FastAPI during development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
