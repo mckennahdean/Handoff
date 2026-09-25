@@ -1,0 +1,23 @@
+# Keeps the Docker build context small and free of secrets.
+# Anything listed here is invisible to every COPY instruction.
+
+# Version control and local tooling
+.git
+.github
+.venv
+**/__pycache__
+.pytest_cache
+.coverage
+coverage.xml
+htmlcov
+
+# Secrets never go into an image; they are passed in at run time.
+.env
+**/.env
+
+# Not part of the backend image
+frontend
+evaluation
+docs
+tests
+backend/test*.py
