@@ -37,6 +37,33 @@ const answeredOpenGaps = computed(() =>
 
 const allGapsResolved = computed(() => openGaps.value.length === 0)
 
+// The procedure as it was loaded (or last approved), used to tell
+// whether the owner has actually edited anything. Cleaned the same
+// way approveProcedure cleans it, so adding and then deleting a
+// blank step, or trailing spaces, does not count as a change.
+const savedContent = ref('')
+
+const contentSnapshot = () =>
+  JSON.stringify({
+    title: title.value.trim(),
+    steps: steps.value
+      .map((step) => step.trim())
+      .filter((step) => step.length > 0),
+    warnings: warnings.value
+      .map((warning) => warning.trim())
+      .filter((warning) => warning.length > 0)
+  })
+
+const hasChanges = computed(() => contentSnapshot() !== savedContent.value)
+
+// Drafts can be approved once every gap is resolved. An approved
+// procedure can only be re-approved if something changed, so its
+// version number never goes up for nothing.
+const canApprove = computed(() =>
+  allGapsResolved.value &&
+  (status.value !== 'approved' || hasChanges.value)
+)
+
 const resolutionLabel = (status) => {
   const labels = {
     merged: '✓ Incorporated with AI',
@@ -178,6 +205,7 @@ const loadProcedure = async () => {
     captureMethod.value = data.capture_method
     status.value = data.status
     version.value = data.version
+    savedContent.value = contentSnapshot()
     approvedLastConfirmed.value = data.last_confirmed
     // Gap questions only apply while a procedure is a pending draft.
     gaps.value =
@@ -258,6 +286,11 @@ const approveProcedure = async () => {
     return
   }
 
+  if (status.value === 'approved' && !hasChanges.value) {
+    errorMessage.value = 'Edit a step or warning before approving changes.'
+    return
+  }
+
   message.value = ''
   errorMessage.value = ''
 
@@ -318,6 +351,7 @@ const approveProcedure = async () => {
 
     status.value = 'approved'
     version.value = data.version
+    savedContent.value = contentSnapshot()
     resolvedGapCount.value = data.resolved_gaps || 0
 
     message.value = 'Procedure approved successfully.'
@@ -761,15 +795,17 @@ onMounted(loadProcedure)
             v-if="!isApproved"
             type="button"
             class="primary-button"
-            :disabled="isSubmitting || !allGapsResolved"
+            :disabled="isSubmitting || !canApprove"
             @click="approveProcedure"
           >
             {{
               isSubmitting
                 ? 'Approving...'
-                : status === 'approved'
-                  ? 'Approve Changes'
-                  : 'Approve Procedure'
+                : status !== 'approved'
+                  ? 'Approve Procedure'
+                  : hasChanges
+                    ? `Approve Changes (v${version + 1})`
+                    : 'No Changes to Approve'
             }}
           </button>
 
