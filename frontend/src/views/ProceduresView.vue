@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { apiFetch } from '../api.js'
+import { apiFetch, errorMessage as apiErrorMessage } from '../api.js'
 
 const router = useRouter()
 
@@ -126,6 +126,41 @@ const pendingCount = computed(() => {
 
 const addProcedure = () => {
   router.push('/capture-procedure')
+}
+
+const deleteProcedure = async (procedure) => {
+  const confirmed = window.confirm(
+    `Permanently delete "${procedure.title}"? Employees will no longer ` +
+    'get answers from it, and any knowledge gaps it resolved will reopen. ' +
+    'This cannot be undone.'
+  )
+
+  if (!confirmed) {
+    return
+  }
+
+  try {
+    const response = await apiFetch(
+      `/api/procedures/${procedure.id}`,
+      { method: 'DELETE' }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      errorMessage.value = apiErrorMessage(
+        data,
+        'Unable to delete the procedure.'
+      )
+      return
+    }
+
+    procedures.value = procedures.value.filter(
+      (item) => item.id !== procedure.id
+    )
+  } catch {
+    errorMessage.value = 'Unable to reach the Handoff server.'
+  }
 }
 
 onMounted(() => {
@@ -364,16 +399,31 @@ onMounted(() => {
 
           </div>
 
-          <RouterLink
+          <div
+
             v-if="isOwner"
-            :to="{
-              path: '/procedure-review',
-              query: { id: procedure.id }
-            }"
-            class="review-button"
+            class="card-actions"
           >
-            Review
-          </RouterLink>
+            <RouterLink
+              :to="{
+                path: '/procedure-review',
+                query: { id: procedure.id }
+              }"
+              class="review-button"
+            >
+              Review
+            </RouterLink>
+
+            <button
+              type="button"
+              class="delete-button"
+              @click="deleteProcedure(procedure)"
+            >
+              Delete
+
+            </button>
+
+          </div>
 
         </article>
 
@@ -716,6 +766,27 @@ onMounted(() => {
 
 .review-button:hover {
   background: #f7f3ed;
+}
+
+.card-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.delete-button {
+  padding: 9px 14px;
+  border: 1px solid #e3c2b8;
+  border-radius: 7px;
+  color: #a33a26;
+  background: white;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  background: #fbefeb;
 }
 
 

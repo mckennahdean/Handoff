@@ -16,6 +16,7 @@ from typing import List, Optional
 
 from backend.db_service import (
     dismiss_gap,
+    delete_procedure,
     get_procedures,
     get_procedure,
     procedure_to_dict,
@@ -422,6 +423,37 @@ def dismiss_knowledge_gap(gap_id: int):
     return {
         "status": "dismissed",
         "gap_id": gap_id
+    }
+
+@app.delete(
+    "/api/procedures/{procedure_id}",
+    dependencies=[Depends(require_owner)]
+)
+def delete_procedure_route(procedure_id: int):
+    try:
+        reopened = delete_procedure(procedure_id)
+
+    except Exception as error:
+        print(
+            "Procedure delete error:",
+            error
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Database error."
+        )
+
+    if reopened is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Procedure not found."
+        )
+
+    return {
+        "status": "deleted",
+        "procedure_id": procedure_id,
+        "gaps_reopened": reopened
     }
 
 @app.post("/api/approve-procedure", dependencies=[Depends(require_owner)])

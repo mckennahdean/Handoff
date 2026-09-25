@@ -413,6 +413,54 @@ def test_employee_cannot_dismiss_gap():
 
     assert response.status_code == 403
 
+def test_owner_can_delete_procedure(monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "delete_procedure",
+        lambda procedure_id: 2
+    )
+
+    response = client.delete("/api/procedures/5")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "deleted"
+    assert response.json()["gaps_reopened"] == 2
+
+
+def test_delete_with_no_reopened_gaps_succeeds(monkeypatch):
+    # 0 reopened gaps is falsy; the route must check "is None".
+    monkeypatch.setattr(
+        main_module,
+        "delete_procedure",
+        lambda procedure_id: 0
+    )
+
+    response = client.delete("/api/procedures/5")
+
+    assert response.status_code == 200
+
+
+def test_delete_missing_procedure_returns_404(monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "delete_procedure",
+        lambda procedure_id: None
+    )
+
+    response = client.delete("/api/procedures/999")
+
+    assert response.status_code == 404
+
+
+def test_employee_cannot_delete_procedure():
+    main_module.app.dependency_overrides[get_current_user] = (
+        lambda: FAKE_EMPLOYEE
+    )
+
+    response = client.delete("/api/procedures/5")
+
+    assert response.status_code == 403
+
 # ---------- Honest abstention ----------
 
 def test_ai_refusal_becomes_logged_abstention(monkeypatch):

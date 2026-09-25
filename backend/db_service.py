@@ -300,3 +300,31 @@ def dismiss_gap(gap_id: int):
         session.commit()
 
         return gap_id
+
+def delete_procedure(procedure_id: int):
+    """Permanently delete a procedure (approved or draft).
+    Knowledge gaps it had resolved reopen, since nothing
+    answers them anymore. Returns the number of reopened
+    gaps, or None if the procedure does not exist."""
+    with Session(engine) as session:
+        procedure = session.get(Procedure, procedure_id)
+
+        if procedure is None:
+            return None
+
+        reopened = session.scalars(
+            select(Gap).where(
+                Gap.status == "resolved",
+                Gap.resolved_by_procedure_id == procedure_id
+            )
+        ).all()
+
+        for gap in reopened:
+            gap.status = "open"
+            gap.resolved_at = None
+            gap.resolved_by_procedure_id = None
+
+        session.delete(procedure)
+        session.commit()
+
+        return len(reopened)
