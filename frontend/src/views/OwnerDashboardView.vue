@@ -140,6 +140,28 @@ const goTo = (path) => {
 
     </section>
 
+    <!-- Owner dashboard navigation -->
+    <nav
+      class="dashboard-tabs"
+      aria-label="Owner dashboard navigation"
+    >
+      <button
+        type="button"
+        class="dashboard-tab active"
+        @click="goTo('/owner-dashboard')"
+      >
+        Dashboard
+      </button>
+
+      <button
+        type="button"
+        class="dashboard-tab"
+        @click="goTo('/user-management')"
+      >
+        User Management
+      </button>
+    </nav>
+
     <!-- Overview cards -->
     <section class="stats-grid">
 
@@ -343,6 +365,38 @@ const goTo = (path) => {
   margin: 0 auto 40px;
 }
 
+/* =========================================
+   Dashboard Navigation
+   ========================================= */
+
+.dashboard-tabs {
+  max-width: 1150px;
+  margin: 0 auto 30px;
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #ded8ce;
+}
+
+.dashboard-tab {
+  padding: 10px 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #666666;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dashboard-tab:hover {
+  color: #275b4f;
+}
+
+.dashboard-tab.active {
+  border-bottom-color: #d26f3d;
+  color: #275b4f;
+}
 
 .eyebrow {
   margin: 0 0 8px;

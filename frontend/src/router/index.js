@@ -36,6 +36,21 @@ const router = createRouter({
     },
 
     // =========================================
+    // User Management
+    // Owner-only user management
+    // =========================================
+
+    {
+      path: '/user-management',
+      name: 'user-management',
+      component: () => import('../views/UserManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+        ownerOnly: true
+      }
+    },
+
+    // =========================================
     // Employee Dashboard
     // =========================================
 
@@ -127,10 +142,20 @@ const router = createRouter({
     {
       path: '/',
       redirect: '/login'
+    },
+
+    // =========================================
+    // Custom 404
+    // =========================================
+
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('../views/NotFoundView.vue')
     }
+
   ]
 })
-
 
 // =========================================
 // Authentication / Role Guard
