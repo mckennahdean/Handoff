@@ -212,7 +212,8 @@ def upload_audio(
 
 @app.post(
     "/api/structure-procedure",
-    response_model=ProcedureResponse
+    response_model=ProcedureResponse,
+    dependencies=[Depends(require_owner)]
 )
 def create_structure(
     request: ProcedureRequest
