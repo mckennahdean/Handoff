@@ -234,3 +234,123 @@ def test_strong_password_passes():
 
 def test_overly_long_password_is_rejected():
     assert password_problems("Aa1!" * 40) != []
+
+
+
+# ---------- User management ----------
+
+FAKE_OWNER = SimpleNamespace(
+    id=1,
+    name="Test Owner",
+    email="owner@test.com",
+    role="owner"
+)
+
+
+def log_in_as(user):
+    main_module.app.dependency_overrides[get_current_user] = lambda: user
+
+
+def test_owner_can_list_users(monkeypatch):
+    log_in_as(FAKE_OWNER)
+    monkeypatch.setattr(
+        auth_routes, "list_users", lambda: [FAKE_OWNER, FAKE_EMPLOYEE]
+    )
+
+    response = client.get("/api/business/users")
+
+    assert response.status_code == 200
+    assert [user["email"] for user in response.json()] == [
+        "owner@test.com",
+        "emp@test.com"
+    ]
+
+
+def test_employee_cannot_manage_users():
+    log_in_as(FAKE_EMPLOYEE)
+
+    responses = [
+        client.get("/api/business/users"),
+        client.patch(
+            "/api/business/users/1/role", json={"role": "employee"}
+        ),
+        client.delete("/api/business/users/1"),
+    ]
+
+    assert [response.status_code for response in responses] == [
+        403, 403, 403
+    ]
+
+
+def test_owner_can_change_another_users_role(monkeypatch):
+    log_in_as(FAKE_OWNER)
+    promoted = SimpleNamespace(**{**vars(FAKE_EMPLOYEE), "role": "owner"})
+    monkeypatch.setattr(
+        auth_routes, "set_user_role", lambda user_id, role: promoted
+    )
+
+    response = client.patch(
+        "/api/business/users/2/role", json={"role": "owner"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["role"] == "owner"
+
+
+def test_owner_cannot_change_their_own_role(monkeypatch):
+    log_in_as(FAKE_OWNER)
+    calls = []
+    monkeypatch.setattr(
+        auth_routes,
+        "set_user_role",
+        lambda user_id, role: calls.append(user_id)
+    )
+
+    response = client.patch(
+        "/api/business/users/1/role", json={"role": "employee"}
+    )
+
+    assert response.status_code == 400
+    # Rejected before the database was touched.
+    assert calls == []
+
+
+def test_role_must_be_owner_or_employee():
+    log_in_as(FAKE_OWNER)
+
+    response = client.patch(
+        "/api/business/users/2/role", json={"role": "admin"}
+    )
+
+    assert response.status_code == 400
+
+
+def test_changing_role_of_missing_user_returns_404(monkeypatch):
+    log_in_as(FAKE_OWNER)
+    monkeypatch.setattr(
+        auth_routes, "set_user_role", lambda user_id, role: None
+    )
+
+    response = client.patch(
+        "/api/business/users/99/role", json={"role": "owner"}
+    )
+
+    assert response.status_code == 404
+
+
+def test_owner_can_delete_an_employee(monkeypatch):
+    log_in_as(FAKE_OWNER)
+    monkeypatch.setattr(auth_routes, "delete_employee", lambda user_id: True)
+
+    response = client.delete("/api/business/users/2")
+
+    assert response.status_code == 200
+
+
+def test_owner_accounts_cannot_be_deleted(monkeypatch):
+    log_in_as(FAKE_OWNER)
+    monkeypatch.setattr(auth_routes, "delete_employee", lambda user_id: False)
+
+    response = client.delete("/api/business/users/1")
+
+    assert response.status_code == 400
