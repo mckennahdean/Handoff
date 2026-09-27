@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from fastapi.testclient import TestClient
 from backend.auth_service import get_current_user
 from backend.db_service import add_question_variant, procedure_chunk_texts
+from backend.gemini_service import AIBusyError, AIQuotaError
 
 import backend.main as main_module
 import pytest
@@ -534,6 +535,39 @@ def test_retrieval_outage_returns_503(monkeypatch):
     )
 
     assert response.status_code == 503
+
+def test_ai_quota_limit_returns_429_with_clear_message(monkeypatch):
+    def quota_reached(question):
+        raise AIQuotaError("429 RESOURCE_EXHAUSTED")
+
+    monkeypatch.setattr(
+        main_module,
+        "find_best_matching_procedure",
+        quota_reached
+    )
+
+    response = client.post(
+        "/api/query",
+        json={"question": "How do I clean the espresso machine?"}
+    )
+
+    assert response.status_code == 429
+    assert response.json()["detail"] == main_module.AI_QUOTA_MESSAGE
+
+
+def test_ai_busy_returns_503_with_clear_message(monkeypatch):
+    def busy(text):
+        raise AIBusyError("503 UNAVAILABLE")
+
+    monkeypatch.setattr(main_module, "structure_procedure", busy)
+
+    response = client.post(
+        "/api/structure-procedure",
+        json={"text": "Unlock the back door and turn on the lights."}
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == main_module.AI_BUSY_MESSAGE
 
 def test_chunks_cover_every_step_and_warning_with_title():
     chunks = procedure_chunk_texts({

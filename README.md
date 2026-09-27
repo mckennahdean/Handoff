@@ -1,108 +1,104 @@
 # Handoff
 
-Handoff is an AI-powered knowledge capture and question-answering system designed to help small businesses document procedures and preserve operational knowledge. Owners narrate procedures, an AI transcribes and structures them, the owner reviews and approves, and employees query the knowledge base in plain language. The system answers with citation when confident and abstains when it isn't.
+AI knowledge capture and grounded Q&A for small businesses.
 
-## Design principles
+An owner explains a procedure out loud. Handoff transcribes it, structures it into steps and warnings, and asks about anything the owner skipped. Nothing reaches employees until the owner approves it. Employees then ask questions in their own words and get an answer with a citation, or an honest "not documented" that becomes a knowledge gap for the owner to fill.
 
-- **Abstention is a feature, not a failure.** Handoff never guesses when approved knowledge is insufficient; it logs the gap for future documentation.
-- **The human Approval Gate.** No procedure enters the knowledge base without explicit owner review.
-- **Gap detection.** Unanswered questions are surfaced to owners rather than silently ignored.
-- **The LLM never touches the database directly.** All persistence goes through the backend, keeping the AI grounded and auditable.
+<!-- screenshot: answered question with citation and last-confirmed date -->
 
-## Technology stack
+## Why Handoff
 
-- **Frontend:** Vue 3, Vite, Vue Router
-- **Backend:** Python 3.13, FastAPI, SQLAlchemy
-- **Database:** PostgreSQL 16 with pgvector extension
-- **AI:** Google Gemini (gemini-3.1-flash-lite for text and transcription, gemini-embedding-001 for vectors)
-- **CI/CD:** GitHub Actions (backend pytest, frontend lint and build)
-- **Development environment:** Docker Compose
+Small businesses keep their procedures in people's heads. When that person is off shift or leaves, the knowledge goes with them. A general-purpose chatbot makes this worse, because it guesses. Handoff is built around one rule: **answer only from what the owner approved, and say so when it can't.**
 
-## Team
+## Features
 
-- **Thomas Dean** — Lead Architect
-- **McKenna Dean** — Interface Designer
-- **Renata Gabdrakhmanova** — Integration Lead
+- **Voice capture.** Record, upload, or type a procedure. The AI transcribes it and structures it into steps and warnings.
+- **Capture gaps.** The AI asks up to five follow-up questions about what the owner skipped. Answers are merged in under an insert-only guardrail: the AI can add steps, but code rejects any change to the owner's own words.
+- **Approval Gate.** Drafts are invisible to employees and to search until the owner approves them. Editing an approved procedure creates a new version.
+- **Grounded answers.** Every answer cites its procedure and the date the owner last confirmed it.
+- **Two abstention gates.** The Threshold Gate stops questions that nothing in the knowledge base is close to, without an AI call. The Generation Gate has the AI confirm that the closest procedure actually contains the answer.
+- **Knowledge gaps.** Unanswered questions are logged, grouped by meaning, and ranked by how often they are asked, with every wording kept ("Also Asked As"). Approving a procedure that answers a gap resolves it automatically; deleting that procedure reopens it.
+- **Roles and security.** Owner and employee accounts, invite codes, Argon2 password hashing, and signed login tokens. A test checks that every non-public API route requires a login.
 
-## Project structure
+## Performance
 
-- `frontend/` — Vue application
-- `backend/` — FastAPI application, SQLAlchemy models, and Gemini services
-- `docs/architecture/` — System design specification and UML component diagram
-- `docs/api/` — API specifications and interface contracts
-- `tests/` — Application tests (backend tests currently in `backend/test_main.py`)
-- `.github/workflows/` — CI/CD pipeline configuration
-- `docker-compose.yml` — Local database container
+Measured offline on Maple & Main Coffee, a fictional coffee shop created for testing (7 procedures, 43 labeled questions, 30 labeled question pairs). Method, raw results, and how to rerun: [evaluation/README.md](evaluation/README.md).
 
-## Running Handoff locally
+| Measure | Result |
+|---|---|
+| Correct procedure retrieved | 29 of 29 answerable questions |
+| Answered when it should | 29 of 29 |
+| Abstained when it should | 14 of 14 |
+| Answer quality | 28 fully correct, 1 partial, 0 invented facts |
+| Median response time | 1.3 to 3.6 seconds across two runs |
+| Automated tests | 78 passing, 77% line coverage (CI requires at least 70%) |
 
-### One-time setup
+### Known limitations
 
-1. Install prerequisites: Python 3.13+, Node 22 LTS, Docker Desktop, Git.
+- **Thin margins.** Some correct answers score just above the 0.68 answer threshold (the lowest is 0.691). A wording mismatch can cause a miss: "What time does the store open?" scored 0.670 until the owner added the word "store" to the procedure. The knowledge gap loop is how owners find and fix these.
+- **Grouping by topic, not intent.** Different questions on the same topic can be grouped together (similarity up to 0.807). "Also Asked As" keeps every wording visible so the owner decides.
+- **Auto-resolve uses one gate.** Resolving a gap on approval uses the Threshold Gate only. In the evaluation, 1 of 14 should-abstain questions would be marked resolved if its closest procedure were re-approved. Adding the Generation Gate to auto-resolve is planned future work.
+- **AI provider limits.** On the Gemini free tier, text generation is limited to 15 requests per minute, and response times depend on the provider's load (the slowest measured answer took 33 seconds).
+- **One business per install.**
 
-2. Clone the repository:
+## Quick start (Docker)
 
-        git clone https://github.com/mckennahdean/Handoff.git
-        cd Handoff
+You need Docker Desktop, Git, and a free Gemini API key from https://aistudio.google.com/apikey.
 
-3. Get a Gemini API key at https://aistudio.google.com/apikey (free tier is sufficient).
+```
+git clone https://github.com/mckennahdean/Handoff.git
+cd Handoff
+cp backend/.env.example .env
+```
 
-4. Create a `.env` file at the **repository root** with these lines:
+Open `.env` and fill in `GEMINI_API_KEY` and `JWT_SECRET_KEY` (the file explains how to generate the secret). Then:
 
-        GEMINI_API_KEY=your-key-here
-        DATABASE_URL=postgresql+psycopg://handoff_user:handoff_password@localhost:5432/handoff
+```
+docker compose up --build -d
+docker compose exec backend python -m backend.seed_demo
+```
 
-5. Set up the Python virtual environment:
+The second command is optional. It loads the Maple & Main demo procedures and takes about two minutes. Open http://localhost:8080 and create the first account, which becomes the owner.
 
-        python -m venv .venv
-        .\.venv\Scripts\Activate.ps1
-        pip install -r backend/requirements.txt
+Developer setup, running tests, and troubleshooting: [docs/INSTALL.md](docs/INSTALL.md).
 
-6. Install frontend dependencies:
+## Architecture
 
-        cd frontend
-        npm install
-        cd ..
+A Vue 3 single-page app talks to a FastAPI backend, which stores procedures, users, and knowledge gaps in PostgreSQL with the pgvector extension. Each procedure step and warning is embedded separately, so a question is matched against the exact step that answers it. Every AI call lives in one module (`backend/gemini_service.py`), so changing AI providers touches one file. Details and diagram: [docs/architecture/](docs/architecture/).
 
-### Every-time startup (three terminals)
+## CI/CD
 
-**Terminal 1 - Database and schema:**
+Every pull request runs:
 
-    docker compose up -d db
-    python -m backend.create_tables
+1. Backend tests against a real PostgreSQL and pgvector database, with a coverage report and a 70% floor
+2. Frontend lint and production build
+3. Docker image builds and a smoke test of the full running stack
 
-**Terminal 2 - Backend:**
-
-    .\.venv\Scripts\Activate.ps1
-    python -m uvicorn backend.main:app --reload
-
-Backend serves at http://127.0.0.1:8000.
-
-**Terminal 3 - Frontend:**
-
-    cd frontend
-    npm run dev
-
-Frontend serves at http://localhost:5173.
-
-### Using the application
-
-Open http://localhost:5173, create an Owner account, capture a procedure by recording or typing, then approve it. Log out, create an Employee account, and ask Handoff a question about the procedure to see the retrieval-augmented answer with citation.
-
-## Testing
-
-Backend tests use pytest and mock the AI service boundary:
-
-    python -m pytest backend/test_main.py -v
-
-CI automatically runs backend tests and frontend lint/build on every pull request to `main`.
+Images that pass are published to the GitHub Container Registry (`ghcr.io/mckennahdean/handoff-backend` and `handoff-frontend`), tagged by commit, by pull request, and `latest` from `main`.
 
 ## Documentation
 
-- **System Design Specification:** `docs/architecture/`
-- **API contracts:** `docs/api/`
-- **UML component diagram:** `docs/architecture/Capstone-Handoff.drawio.png`
+| Document | Contents |
+|---|---|
+| [Install guide](docs/INSTALL.md) | Docker and developer setup, configuration, tests, troubleshooting |
+| [User guide](docs/USER_GUIDE.md) | Owner and employee workflows |
+| [API reference](docs/api/) | Every endpoint, who can call it, and what it returns |
+| [Architecture](docs/architecture/) | Components, data flow, and design decisions |
+| [Evaluation](evaluation/README.md) | How accuracy, abstention, and latency were measured |
+| [Contributions](docs/CONTRIBUTIONS.md) | What each team member built |
+
+## Technology
+
+Vue 3, Vite, Vue Router · Python 3.13, FastAPI, SQLAlchemy · PostgreSQL 16 with pgvector · Google Gemini (gemini-3.1-flash-lite, gemini-embedding-001) · Docker Compose, nginx · GitHub Actions, GitHub Container Registry
+
+## Team
+
+UMGC CMSC 495 Computer Science Capstone, Fall 2026.
+
+- **Thomas Dean**, Lead Architect
+- **McKenna Dean**, Interface Designer
+- **Renata Gabdrakhmanova**, Integration Lead
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT. See [LICENSE](LICENSE).

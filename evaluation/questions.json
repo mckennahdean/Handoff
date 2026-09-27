@@ -44,7 +44,8 @@
     {"id": "q39", "type": "off_topic", "question": "What time is it?", "expected": []},
     {"id": "q40", "type": "off_topic", "question": "Who won the game last night?", "expected": []},
     {"id": "q41", "type": "off_topic", "question": "Can you help me write a cover letter?", "expected": []},
-    {"id": "q42", "type": "off_topic", "question": "What's the weather tomorrow?", "expected": []}
+    {"id": "q42", "type": "off_topic", "question": "What's the weather tomorrow?", "expected": []},
+    {"id": "q43", "type": "paraphrase", "question": "What time does the store open?", "expected": [1], "key_fact": "6:30 AM", "note": "Found in live testing: scored 0.670 before the owner added store wording to Opening v3."}
   ],
   "pairs": [
     {"id": "p01", "kind": "paraphrase", "same": true, "a": "How often should we descale the espresso machine?", "b": "When is the espresso machine supposed to be descaled?"},

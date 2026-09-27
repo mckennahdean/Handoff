@@ -31,6 +31,8 @@ from backend.gemini_service import (
     structure_procedure,
     merge_gap_answers,
     MergeAlteredContentError,
+    AIQuotaError,
+    AIBusyError,
     answer_question_from_procedure,
     transcribe_audio,
     NOT_DOCUMENTED_REPLY
@@ -109,6 +111,32 @@ class MergeRequest(BaseModel):
     warnings: List[str]
     answers: List[GapAnswer]
 
+AI_QUOTA_MESSAGE = (
+    "Handoff's AI has reached its usage limit for now. Please wait "
+    "a minute and try again. If this keeps happening, the daily "
+    "limit may be used up for today."
+)
+
+AI_BUSY_MESSAGE = (
+    "Handoff's AI service is busy right now. "
+    "Please try again in a moment."
+)
+
+
+def raise_if_ai_unavailable(error: Exception):
+    """Give AI limit and outage errors a clear, specific message
+    instead of a generic server error."""
+    if isinstance(error, AIQuotaError):
+        raise HTTPException(
+            status_code=429,
+            detail=AI_QUOTA_MESSAGE
+        ) from error
+
+    if isinstance(error, AIBusyError):
+        raise HTTPException(
+            status_code=503,
+            detail=AI_BUSY_MESSAGE
+        ) from error
 
 @app.get("/")
 def home():
@@ -185,6 +213,8 @@ def upload_audio(
                 error
             )
 
+            raise_if_ai_unavailable(error)
+
             raise HTTPException(
                 status_code=500,
                 detail="Transcription service error."
@@ -212,7 +242,8 @@ def upload_audio(
 
 @app.post(
     "/api/structure-procedure",
-    response_model=ProcedureResponse
+    response_model=ProcedureResponse,
+    dependencies=[Depends(require_owner)]
 )
 def create_structure(
     request: ProcedureRequest
@@ -235,6 +266,8 @@ def create_structure(
             "Procedure structuring error:",
             error
         )
+
+        raise_if_ai_unavailable(error)
 
         raise HTTPException(
             status_code=500,
@@ -372,6 +405,8 @@ def merge_answers(request: MergeRequest):
             error
         )
 
+        raise_if_ai_unavailable(error)
+
         raise HTTPException(
             status_code=500,
             detail="LLM service error."
@@ -482,6 +517,8 @@ def approve_procedure(
             error
         )
 
+        raise_if_ai_unavailable(error)
+
         raise HTTPException(
             status_code=500,
             detail="Database or embedding service error."
@@ -548,6 +585,8 @@ def query_procedure(
             error
         )
 
+        raise_if_ai_unavailable(error)
+
         raise HTTPException(
             status_code=503,
             detail=(
@@ -579,6 +618,8 @@ def query_procedure(
             "Answer generation error:",
             error
         )
+
+        raise_if_ai_unavailable(error)
 
         raise HTTPException(
             status_code=503,

@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 import backend.db_service as db_service
 from backend.models import Base, Gap, ProcedureChunk
+import backend.seed_demo as seed_demo
 
 load_dotenv()
 
@@ -197,3 +198,56 @@ def test_deleting_a_procedure_reopens_gaps_and_removes_chunks(db):
     assert stored.resolved_by_procedure_id is None
     # ON DELETE CASCADE removed the chunks inside Postgres itself.
     assert count(db, ProcedureChunk) == 0
+
+def test_get_gaps_lists_open_first_with_variants_and_resolver_title(db):
+    db_service.log_gap("Where do I record the till count?", 0.4)
+    db_service.log_gap("Who counts the till at night?", 0.4)
+    db_service.log_gap("How often should we descale?", 0.3)
+
+    procedure = db_service.save_procedure(CLOSING)
+
+    gaps = db_service.get_gaps()
+
+    # Open first, even though the resolved gap was asked more often.
+    assert [gap["status"] for gap in gaps] == ["open", "resolved"]
+
+    descale, till = gaps
+    assert descale["question"] == "How often should we descale?"
+    assert descale["variants"] == []
+    assert descale["resolved_by_title"] is None
+
+    assert till["frequency_count"] == 2
+    assert till["variants"] == ["Who counts the till at night?"]
+    assert till["resolved_by_procedure_id"] == procedure.id
+    assert till["resolved_by_title"] == "Closing the Cafe"
+
+
+def test_dismissing_a_gap_marks_it_dismissed(db):
+    gap = db_service.log_gap("How often should we descale?", 0.3)
+
+    assert db_service.dismiss_gap(gap.id) == gap.id
+    assert db_service.dismiss_gap(9999) is None
+
+    with Session(db) as session:
+        stored = session.get(Gap, gap.id)
+
+    assert stored.status == "dismissed"
+    assert stored.resolved_at is not None
+
+def test_asking_again_after_dismissal_opens_a_new_gap(db):
+    gap = db_service.log_gap("How often should we descale?", 0.3)
+    db_service.dismiss_gap(gap.id)
+
+    again = db_service.log_gap("When do we descale the machine?", 0.3)
+
+    assert again.id != gap.id
+    assert again.status == "open"
+    assert again.frequency_count == 1
+
+def test_seed_demo_adds_each_procedure_once(db):
+    first_run = seed_demo.seed(pause_seconds=0)
+    second_run = seed_demo.seed(pause_seconds=0)
+
+    assert first_run == 7
+    assert second_run == 0
+    assert len(db_service.get_procedures()) == 7
