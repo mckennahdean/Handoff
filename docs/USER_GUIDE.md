@@ -59,7 +59,7 @@ Open it from the Procedures page with **Review**. The approve button reads **No 
 
 ### 5. Delete a procedure
 
-On the Procedures page, select **Delete** and confirm. Deleting is permanent. Any knowledge gaps the procedure had resolved become open again, because nothing answers them anymore.
+Open the procedure (or draft) from the Procedures page with **Review**, select **Delete Procedure**, and confirm. Deleting is permanent. Any knowledge gaps the procedure had resolved become open again, because nothing answers them anymore.
 
 ### 6. Knowledge gaps
 

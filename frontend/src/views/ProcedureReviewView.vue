@@ -223,8 +223,6 @@ const loadProcedure = async () => {
   }
 }
 
-const showChangesModal = ref(false)
-const changesComment = ref('')
 const message = ref('')
 const isSubmitting = ref(false)
 const approvedLastConfirmed = ref(null)
@@ -246,33 +244,37 @@ const removeWarning = (index) => {
   warnings.value.splice(index, 1)
 }
 
-const submitChanges = () => {
-  if (!changesComment.value.trim()) {
+const deleteProcedure = async () => {
+  const confirmed = window.confirm(
+    `Permanently delete "${title.value}"? Employees will no longer ` +
+    'get answers from it, and any knowledge gaps it resolved will reopen. ' +
+    'This cannot be undone.'
+  )
+
+  if (!confirmed) {
     return
   }
 
-  isSubmitting.value = true
+  try {
+    const response = await apiFetch(
+      `/api/procedures/${procedureId}`,
+      { method: 'DELETE' }
+    )
 
-  const changesRequest = {
-    title: title.value,
-    status: 'Needs Changes',
-    comment: changesComment.value.trim(),
-    steps: steps.value,
-    warnings: warnings.value
+    const data = await response.json()
+
+    if (!response.ok) {
+      errorMessage.value = apiErrorMessage(
+        data,
+        'Unable to delete the procedure.'
+      )
+      return
+    }
+
+    router.push('/procedures')
+  } catch {
+    errorMessage.value = 'Unable to reach the Handoff server.'
   }
-
-  localStorage.setItem(
-    'procedureChanges',
-    JSON.stringify(changesRequest)
-  )
-
-  setTimeout(() => {
-    isSubmitting.value = false
-    showChangesModal.value = false
-    message.value = 'Procedure returned for changes.'
-    errorMessage.value = ''
-    changesComment.value = ''
-  }, 400)
 }
 
 const approveProcedure = async () => {
@@ -778,18 +780,19 @@ onMounted(loadProcedure)
           >
             Back to Dashboard
           </button>
-        </div>
-
-        <div class="action-right">
 
           <button
             v-if="!isApproved"
             type="button"
-            class="secondary-button"
-            @click="showChangesModal = true"
+            class="delete-button"
+            @click="deleteProcedure"
           >
-            Needs Changes
+            Delete Procedure
           </button>
+
+        </div>
+
+        <div class="action-right">
 
           <button
             v-if="!isApproved"
@@ -856,84 +859,6 @@ onMounted(loadProcedure)
         View Approved Procedures
       </button>
     </section>
-
-    <div
-      v-if="showChangesModal"
-      class="modal-backdrop"
-      @click.self="showChangesModal = false"
-    >
-      <section
-        class="changes-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="changes-title"
-      >
-
-        <div class="modal-header">
-          <div>
-            <p class="eyebrow">Owner Review</p>
-
-            <h2 id="changes-title">
-              Request Changes
-            </h2>
-          </div>
-
-          <button
-            type="button"
-            class="close-button"
-            aria-label="Close"
-            @click="showChangesModal = false"
-          >
-            ×
-          </button>
-        </div>
-
-        <p class="modal-description">
-          Explain what needs to be corrected before this
-          procedure can be approved.
-        </p>
-
-        <label for="changes-comment">
-          Review Comment
-        </label>
-
-        <textarea
-          id="changes-comment"
-          v-model="changesComment"
-          rows="5"
-          placeholder="Describe the changes that are needed..."
-        ></textarea>
-
-        <div class="modal-actions">
-
-          <button
-            type="button"
-            class="secondary-button"
-            @click="showChangesModal = false"
-          >
-            Cancel
-          </button>
-
-          <button
-            type="button"
-            class="primary-button"
-            :disabled="
-              !changesComment.trim() || isSubmitting
-            "
-            @click="submitChanges"
-          >
-            {{
-              isSubmitting
-                ? 'Submitting...'
-                : 'Submit Changes'
-            }}
-          </button>
-
-        </div>
-
-      </section>
-    </div>
-
   </main>
 </template>
 
@@ -1670,4 +1595,20 @@ textarea:disabled {
     width: 100%;
   }
 }
+
+.delete-button {
+  padding: 9px 14px;
+  border: 1px solid #e3c2b8;
+  border-radius: 7px;
+  color: #a33a26;
+  background: white;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  background: #fbefeb;
+}
+
 </style>
