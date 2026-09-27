@@ -1,13 +1,13 @@
 {
-  "run_at": "2026-09-25T16:14:52.924727+00:00",
+  "run_at": "2026-09-27T00:19:16.448204+00:00",
   "text_model": "gemini-3.1-flash-lite",
   "answer_threshold": 0.68,
   "procedure_versions": {
-    "1": 2,
+    "1": 3,
     "2": 1,
     "3": 2,
     "4": 1,
-    "5": 1,
+    "5": 2,
     "6": 1,
     "7": 1
   },
@@ -21,13 +21,13 @@
       ],
       "key_fact": "6:30 AM",
       "procedure_id": 1,
-      "score": 0.7803,
+      "score": 0.7787,
       "passes_threshold": true,
       "answer": "The cafe opens at 6:30 AM.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.205,
-      "generate_seconds": 7.267
+      "embed_seconds": 0.305,
+      "generate_seconds": 0.529
     },
     {
       "id": "q02",
@@ -44,8 +44,8 @@
       "answer": "The till should hold $150 ($100 in small bills and $50 in coins).",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.198,
-      "generate_seconds": 4.013
+      "embed_seconds": 0.184,
+      "generate_seconds": 0.455
     },
     {
       "id": "q03",
@@ -61,8 +61,8 @@
       "answer": "You run the backflush cycle five times with detergent, and then repeat the backflush cycle five times with plain water.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.203,
-      "generate_seconds": 5.811
+      "embed_seconds": 0.177,
+      "generate_seconds": 2.671
     },
     {
       "id": "q04",
@@ -79,8 +79,8 @@
       "answer": "The milk fridge should be 41\u00b0F or below.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.182,
-      "generate_seconds": 2.506
+      "embed_seconds": 0.183,
+      "generate_seconds": 0.602
     },
     {
       "id": "q05",
@@ -96,8 +96,8 @@
       "answer": "To void an item, select the item on the order screen and press Void before the customer pays.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.194,
-      "generate_seconds": 20.3
+      "embed_seconds": 0.178,
+      "generate_seconds": 1.306
     },
     {
       "id": "q06",
@@ -114,8 +114,8 @@
       "answer": "Yes, for refunds over $20, obtain a manager's approval code.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.283,
-      "generate_seconds": 2.127
+      "embed_seconds": 0.185,
+      "generate_seconds": 0.571
     },
     {
       "id": "q07",
@@ -131,8 +131,8 @@
       "answer": "The ingredient binder is stored on the shelf under the register, labeled \"Ingredients.\"",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.178,
-      "generate_seconds": 10.141
+      "embed_seconds": 0.176,
+      "generate_seconds": 1.401
     },
     {
       "id": "q08",
@@ -148,8 +148,8 @@
       "answer": "Stop brewing new batch coffee at 5:45 PM.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.267,
-      "generate_seconds": 2.099
+      "embed_seconds": 0.277,
+      "generate_seconds": 0.453
     },
     {
       "id": "q09",
@@ -165,8 +165,8 @@
       "answer": "Leave the signed invoice in the manager's tray.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.291,
-      "generate_seconds": 7.882
+      "embed_seconds": 0.179,
+      "generate_seconds": 1.608
     },
     {
       "id": "q10",
@@ -177,13 +177,13 @@
       ],
       "key_fact": "Call 911 first",
       "procedure_id": 5,
-      "score": 0.8199,
+      "score": 0.7911,
       "passes_threshold": true,
-      "answer": "If a customer has an allergic reaction, call 911 first, then the manager. Call 911 first, and never wait for a manager before calling. Then contact the manager on duty, who is listed on the weekly schedule in the office.",
+      "answer": "If a customer has an allergic reaction, call 911 first and never wait for a manager before calling. Then contact the manager on duty, who is listed on the weekly schedule in the office.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 3.18,
-      "generate_seconds": 4.402
+      "embed_seconds": 0.184,
+      "generate_seconds": 1.127
     },
     {
       "id": "q11",
@@ -199,8 +199,8 @@
       "answer": "18 grams of coffee.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.18,
-      "generate_seconds": 0.439
+      "embed_seconds": 0.177,
+      "generate_seconds": 2.309
     },
     {
       "id": "q12",
@@ -216,8 +216,8 @@
       "answer": "If the machine won't turn on, check that the breaker labeled \"Espresso\" in the office electrical panel is on and that the water valve under the bar counter is open.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.231,
-      "generate_seconds": 2.242
+      "embed_seconds": 0.178,
+      "generate_seconds": 2.523
     },
     {
       "id": "q13",
@@ -233,8 +233,8 @@
       "answer": "Never substitute dish soap, because it foams and leaves residue inside the machine.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.181,
-      "generate_seconds": 1.366
+      "embed_seconds": 0.182,
+      "generate_seconds": 2.826
     },
     {
       "id": "q14",
@@ -250,8 +250,8 @@
       "answer": "To handle this, follow these steps:\n\n1. Listen to the whole complaint without interrupting, then apologize.\n2. Offer to remake the drink free of charge.\n3. Log the remake on the waste sheet (located on the clipboard behind the bar) with the reason for the remake.\n4. Remember: Never argue with the customer about whether the drink was made correctly.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.279,
-      "generate_seconds": 0.588
+      "embed_seconds": 0.181,
+      "generate_seconds": 0.639
     },
     {
       "id": "q15",
@@ -267,8 +267,8 @@
       "answer": "Unopened bags of coffee beans can be refunded within 14 days with a receipt or a match in Order History. To issue the refund, locate the original sale in Order History using the receipt number or the last four digits of the card. If you cannot find the sale, you cannot refund it. For card sales, process the refund back to the original card; for cash sales, process the refund from the drawer. If the refund is over $20, obtain a manager's approval code. Finally, print the refund receipt and provide it to the customer.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.256,
-      "generate_seconds": 2.478
+      "embed_seconds": 0.19,
+      "generate_seconds": 0.675
     },
     {
       "id": "q16",
@@ -284,8 +284,8 @@
       "answer": "Yes. Search Order History by the date, the approximate time, and the total amount. If you still can't find the sale, you can't refund it. Offer a free remake or a free drink card instead, and let the manager on duty know.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.177,
-      "generate_seconds": 5.307
+      "embed_seconds": 0.171,
+      "generate_seconds": 0.728
     },
     {
       "id": "q17",
@@ -301,8 +301,8 @@
       "answer": "Check the delivery against the invoice, write the missing items on the invoice, ask the driver to initial the change, and text a photo of the invoice to the manager on duty.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.189,
-      "generate_seconds": 0.67
+      "embed_seconds": 0.193,
+      "generate_seconds": 0.459
     },
     {
       "id": "q18",
@@ -315,11 +315,11 @@
       "procedure_id": 5,
       "score": 0.761,
       "passes_threshold": true,
-      "answer": "To ensure a customer with a nut allergy receives a safe drink, follow these steps:\n\n1. Repeat the allergy back to the customer.\n2. Press the 'Allergy' button on the register order.\n3. Press the Allergy button on each item that is for the customer with the allergy.\n4. Verbally alert the barista to the specific allergy and drink item.\n5. Use a clean pitcher from the green allergen shelf for alternative milks.\n6. Purge the steam wand for three seconds and wipe with a fresh cloth.\n7. Use only sealed syrup bottles, being aware that almond and hazelnut syrups contain tree nuts.\n8. After each use, wash the allergen pitcher in the back sink with hot, soapy water, rinse it, and let it air-dry on the green allergen shelf.\n9. Personally hand the drink to the customer and confirm the allergy by name.\n10. If uncertain about safety, present the ingredient binder at the register to the customer.\n\nAdditionally, never promise that an item is allergen-free, as our kitchen handles common allergens. Never put allergen pitchers in the dish bin with the regular pitchers.",
+      "answer": "To ensure a customer with a nut allergy receives a safe drink, follow these steps:\n\n*   Repeat the allergy back to the customer.\n*   Press the 'Allergy' button on the register order.\n*   Press the Allergy button on each item that is for the customer with the allergy, not on the whole order.\n*   Verbally alert the barista to the specific allergy and drink item.\n*   Use a clean pitcher from the green allergen shelf for alternative milks.\n*   Purge the steam wand for three seconds and wipe with a fresh cloth.\n*   Use only sealed syrup bottles, being aware that almond and hazelnut syrups contain tree nuts.\n*   After each use, wash the allergen pitcher in the back sink with hot, soapy water, rinse it, and let it air-dry on the green allergen shelf.\n*   Personally hand the drink to the customer and confirm the allergy by name.\n*   If uncertain about safety, present the ingredient binder at the register to the customer.\n\nAdditionally, note the following warnings:\n*   Never promise that an item is allergen-free; our kitchen handles common allergens.\n*   Our pastries come from a bakery that handles wheat, eggs, milk, and tree nuts.\n*   Never put allergen pitchers in the dish bin with the regular pitchers.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.22,
-      "generate_seconds": 5.843
+      "embed_seconds": 0.168,
+      "generate_seconds": 1.152
     },
     {
       "id": "q19",
@@ -335,8 +335,8 @@
       "answer": "Log unsold pastries on the waste sheet and throw them out; nothing in the case carries over to the next day.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.224,
-      "generate_seconds": 32.774
+      "embed_seconds": 0.187,
+      "generate_seconds": 2.23
     },
     {
       "id": "q20",
@@ -352,8 +352,8 @@
       "answer": "Put used cloths in the laundry bin in the back room and hang a clean cloth for the morning.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.237,
-      "generate_seconds": 7.744
+      "embed_seconds": 0.19,
+      "generate_seconds": 0.511
     },
     {
       "id": "q21",
@@ -370,8 +370,8 @@
       "answer": "Leave the machine on overnight.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.193,
-      "generate_seconds": 2.71
+      "embed_seconds": 0.176,
+      "generate_seconds": 0.511
     },
     {
       "id": "q22",
@@ -389,8 +389,8 @@
       "answer": "The waste sheet is on the clipboard behind the bar.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.183,
-      "generate_seconds": 2.647
+      "embed_seconds": 0.171,
+      "generate_seconds": 1.206
     },
     {
       "id": "q23",
@@ -406,8 +406,8 @@
       "answer": "Check milk and dairy with the probe thermometer and reject anything above 41\u00b0F. Hand rejected items straight back to the driver before they leave; do not put them away.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.202,
-      "generate_seconds": 1.78
+      "embed_seconds": 0.168,
+      "generate_seconds": 0.657
     },
     {
       "id": "q24",
@@ -423,8 +423,8 @@
       "answer": "If the back door won't lock, never leave the building unlocked. Call the manager and wait inside with the other closing employee until the manager or a locksmith arrives.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.188,
-      "generate_seconds": 4.418
+      "embed_seconds": 0.154,
+      "generate_seconds": 1.653
     },
     {
       "id": "q25",
@@ -440,8 +440,8 @@
       "answer": "If the complaint is about an employee, thank the customer, write down the details, and give them to the manager that day. If the manager is not on-site, seal the written details in an envelope marked \"For the Manager\" and leave it in the manager's tray in the office. Then text the manager on duty that a complaint note is waiting. Do not discuss the complaint with the employee it is about.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.197,
-      "generate_seconds": 2.778
+      "embed_seconds": 0.19,
+      "generate_seconds": 0.766
     },
     {
       "id": "q26",
@@ -458,8 +458,8 @@
       "answer": "Throw out any milk that was above 41\u00b0F for more than 4 hours.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.19,
-      "generate_seconds": 1.82
+      "embed_seconds": 0.204,
+      "generate_seconds": 2.133
     },
     {
       "id": "q27",
@@ -475,8 +475,8 @@
       "answer": "If the walk-in temperature is above 41\u00b0F, make sure the door closes fully and the fan inside is running, then check again after 30 minutes. If it is still above 41\u00b0F, move the milk and dairy to the milk fridge under the bar, write the temperature on the temperature log, and tell the manager on duty, who will call the refrigeration repair company.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.209,
-      "generate_seconds": 6.7
+      "embed_seconds": 0.199,
+      "generate_seconds": 1.294
     },
     {
       "id": "q28",
@@ -492,8 +492,8 @@
       "answer": "Make sure the fridge door is fully closed and nothing is blocking the vent, then check again after 30 minutes. If it is still above 41\u00b0F, move all the milk to the walk-in overnight, write the problem on the temperature log, and tell the manager on duty.",
       "refused": false,
       "outcome": "answered",
-      "embed_seconds": 0.192,
-      "generate_seconds": 5.772
+      "embed_seconds": 0.176,
+      "generate_seconds": 4.085
     },
     {
       "id": "q29",
@@ -507,8 +507,8 @@
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "refused_by_generation_gate",
-      "embed_seconds": 0.197,
-      "generate_seconds": 2.318
+      "embed_seconds": 0.196,
+      "generate_seconds": 2.238
     },
     {
       "id": "q30",
@@ -522,8 +522,8 @@
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "blocked_by_threshold_gate",
-      "embed_seconds": 0.244,
-      "generate_seconds": 14.668
+      "embed_seconds": 0.175,
+      "generate_seconds": 0.484
     },
     {
       "id": "q31",
@@ -537,8 +537,8 @@
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "blocked_by_threshold_gate",
-      "embed_seconds": 0.208,
-      "generate_seconds": 12.854
+      "embed_seconds": 0.209,
+      "generate_seconds": 0.513
     },
     {
       "id": "q32",
@@ -552,8 +552,8 @@
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "blocked_by_threshold_gate",
-      "embed_seconds": 0.216,
-      "generate_seconds": 3.439
+      "embed_seconds": 0.297,
+      "generate_seconds": 0.51
     },
     {
       "id": "q33",
@@ -567,8 +567,8 @@
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "blocked_by_threshold_gate",
-      "embed_seconds": 0.206,
-      "generate_seconds": 8.372
+      "embed_seconds": 0.19,
+      "generate_seconds": 0.608
     },
     {
       "id": "q34",
@@ -582,8 +582,8 @@
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "blocked_by_threshold_gate",
-      "embed_seconds": 0.169,
-      "generate_seconds": 1.303
+      "embed_seconds": 0.165,
+      "generate_seconds": 0.425
     },
     {
       "id": "q35",
@@ -597,8 +597,8 @@
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "blocked_by_threshold_gate",
-      "embed_seconds": 0.324,
-      "generate_seconds": 3.157
+      "embed_seconds": 0.165,
+      "generate_seconds": 0.51
     },
     {
       "id": "q36",
@@ -612,8 +612,8 @@
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "blocked_by_threshold_gate",
-      "embed_seconds": 0.19,
-      "generate_seconds": 2.884
+      "embed_seconds": 0.151,
+      "generate_seconds": 2.308
     },
     {
       "id": "q37",
@@ -627,8 +627,8 @@
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "blocked_by_threshold_gate",
-      "embed_seconds": 0.215,
-      "generate_seconds": 5.931
+      "embed_seconds": 0.313,
+      "generate_seconds": 1.703
     },
     {
       "id": "q38",
@@ -637,13 +637,13 @@
       "expected": [],
       "key_fact": null,
       "procedure_id": 1,
-      "score": 0.6505,
+      "score": 0.65,
       "passes_threshold": false,
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "blocked_by_threshold_gate",
-      "embed_seconds": 0.202,
-      "generate_seconds": 5.916
+      "embed_seconds": 0.191,
+      "generate_seconds": 1.677
     },
     {
       "id": "q39",
@@ -652,13 +652,13 @@
       "expected": [],
       "key_fact": null,
       "procedure_id": 1,
-      "score": 0.545,
+      "score": 0.5482,
       "passes_threshold": false,
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "blocked_by_threshold_gate",
-      "embed_seconds": 0.242,
-      "generate_seconds": 2.141
+      "embed_seconds": 0.183,
+      "generate_seconds": 1.193
     },
     {
       "id": "q40",
@@ -672,8 +672,8 @@
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "blocked_by_threshold_gate",
-      "embed_seconds": 0.4,
-      "generate_seconds": 2.636
+      "embed_seconds": 0.228,
+      "generate_seconds": 1.04
     },
     {
       "id": "q41",
@@ -687,8 +687,8 @@
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "blocked_by_threshold_gate",
-      "embed_seconds": 0.188,
-      "generate_seconds": 3.607
+      "embed_seconds": 0.166,
+      "generate_seconds": 1.919
     },
     {
       "id": "q42",
@@ -702,8 +702,25 @@
       "answer": "This information is not documented in the retrieved procedure.",
       "refused": true,
       "outcome": "blocked_by_threshold_gate",
-      "embed_seconds": 0.22,
-      "generate_seconds": 3.862
+      "embed_seconds": 0.187,
+      "generate_seconds": 1.301
+    },
+    {
+      "id": "q43",
+      "type": "paraphrase",
+      "question": "What time does the store open?",
+      "expected": [
+        1
+      ],
+      "key_fact": "6:30 AM",
+      "procedure_id": 1,
+      "score": 0.701,
+      "passes_threshold": true,
+      "answer": "The store opens at 6:30 AM.",
+      "refused": false,
+      "outcome": "answered",
+      "embed_seconds": 0.162,
+      "generate_seconds": 0.536
     }
   ]
 }

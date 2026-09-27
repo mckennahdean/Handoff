@@ -1,12 +1,12 @@
 {
-  "run_at": "2026-09-25T15:13:39.125096+00:00",
+  "run_at": "2026-09-27T00:13:53.225549+00:00",
   "embedding_model": "gemini-embedding-001",
   "procedure_versions": {
-    "1": 2,
+    "1": 3,
     "2": 1,
     "3": 2,
     "4": 1,
-    "5": 1,
+    "5": 2,
     "6": 1,
     "7": 1
   },
@@ -17,314 +17,314 @@
         "tasks": false
       },
       "summary": {
-        "retrieval_correct": 26,
-        "answerable_total": 28,
+        "retrieval_correct": 27,
+        "answerable_total": 29,
         "retrieval_direct": "10/10",
-        "retrieval_paraphrase": "16/18",
-        "lowest_correct_answerable_score": 0.5788,
+        "retrieval_paraphrase": "17/19",
+        "lowest_correct_answerable_score": 0.5733,
         "highest_unanswerable_score": 0.6975,
         "at_current_threshold": {
           "threshold": 0.7,
           "answered_correctly": 8,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.5238
+          "overall_accuracy": 0.5116
         },
         "best": {
           "threshold": 0.63,
           "answered_correctly": 23,
           "wrong_procedure_passed": 1,
           "abstained_correctly": 12,
-          "overall_accuracy": 0.8333
+          "overall_accuracy": 0.814
         }
       },
       "sweep": [
         {
           "threshold": 0.5,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 1,
-          "overall_accuracy": 0.6429
+          "overall_accuracy": 0.6512
         },
         {
           "threshold": 0.51,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
-          "abstained_correctly": 3,
-          "overall_accuracy": 0.6905
+          "abstained_correctly": 2,
+          "overall_accuracy": 0.6744
         },
         {
           "threshold": 0.52,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 3,
-          "overall_accuracy": 0.6905
+          "overall_accuracy": 0.6977
         },
         {
           "threshold": 0.53,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 3,
-          "overall_accuracy": 0.6905
+          "overall_accuracy": 0.6977
         },
         {
           "threshold": 0.54,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 4,
-          "overall_accuracy": 0.7143
+          "overall_accuracy": 0.7209
         },
         {
           "threshold": 0.55,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 4,
-          "overall_accuracy": 0.7143
+          "overall_accuracy": 0.7209
         },
         {
           "threshold": 0.56,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 5,
-          "overall_accuracy": 0.7381
+          "overall_accuracy": 0.7442
         },
         {
           "threshold": 0.57,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 6,
-          "overall_accuracy": 0.7619
+          "overall_accuracy": 0.7674
         },
         {
           "threshold": 0.58,
-          "answered_correctly": 25,
+          "answered_correctly": 26,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 6,
-          "overall_accuracy": 0.7381
+          "overall_accuracy": 0.7442
         },
         {
           "threshold": 0.59,
-          "answered_correctly": 24,
+          "answered_correctly": 25,
           "wrong_procedure_passed": 2,
-          "abstained_correctly": 7,
-          "overall_accuracy": 0.7381
+          "abstained_correctly": 8,
+          "overall_accuracy": 0.7674
         },
         {
           "threshold": 0.6,
-          "answered_correctly": 24,
+          "answered_correctly": 25,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 9,
-          "overall_accuracy": 0.7857
+          "overall_accuracy": 0.7907
         },
         {
           "threshold": 0.61,
-          "answered_correctly": 23,
+          "answered_correctly": 24,
           "wrong_procedure_passed": 1,
           "abstained_correctly": 10,
-          "overall_accuracy": 0.7857
+          "overall_accuracy": 0.7907
         },
         {
           "threshold": 0.62,
-          "answered_correctly": 23,
+          "answered_correctly": 24,
           "wrong_procedure_passed": 1,
           "abstained_correctly": 11,
-          "overall_accuracy": 0.8095
+          "overall_accuracy": 0.814
         },
         {
           "threshold": 0.63,
           "answered_correctly": 23,
           "wrong_procedure_passed": 1,
           "abstained_correctly": 12,
-          "overall_accuracy": 0.8333
+          "overall_accuracy": 0.814
         },
         {
           "threshold": 0.64,
           "answered_correctly": 20,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.7857
+          "overall_accuracy": 0.7674
         },
         {
           "threshold": 0.65,
           "answered_correctly": 20,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.7857
+          "overall_accuracy": 0.7674
         },
         {
           "threshold": 0.66,
           "answered_correctly": 18,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.7381
+          "overall_accuracy": 0.7209
         },
         {
           "threshold": 0.67,
           "answered_correctly": 15,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.6667
+          "overall_accuracy": 0.6512
         },
         {
           "threshold": 0.68,
           "answered_correctly": 12,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.5952
+          "overall_accuracy": 0.5814
         },
         {
           "threshold": 0.69,
-          "answered_correctly": 10,
+          "answered_correctly": 11,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.5476
+          "overall_accuracy": 0.5581
         },
         {
           "threshold": 0.7,
           "answered_correctly": 8,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.5238
+          "overall_accuracy": 0.5116
         },
         {
           "threshold": 0.71,
           "answered_correctly": 6,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.4762
+          "overall_accuracy": 0.4651
         },
         {
           "threshold": 0.72,
           "answered_correctly": 4,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.4286
+          "overall_accuracy": 0.4186
         },
         {
           "threshold": 0.73,
           "answered_correctly": 2,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.381
+          "overall_accuracy": 0.3721
         },
         {
           "threshold": 0.74,
           "answered_correctly": 2,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.381
+          "overall_accuracy": 0.3721
         },
         {
           "threshold": 0.75,
-          "answered_correctly": 2,
+          "answered_correctly": 1,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.381
+          "overall_accuracy": 0.3488
         },
         {
           "threshold": 0.76,
           "answered_correctly": 1,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3571
+          "overall_accuracy": 0.3488
         },
         {
           "threshold": 0.77,
           "answered_correctly": 1,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3571
+          "overall_accuracy": 0.3488
         },
         {
           "threshold": 0.78,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.79,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.8,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.81,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.82,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.83,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.84,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.85,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.86,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.87,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.88,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.89,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.9,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         }
       ],
       "questions": [
@@ -335,7 +335,7 @@
             1
           ],
           "top_procedure": 1,
-          "top_score": 0.687,
+          "top_score": 0.6902,
           "correct_procedure": true
         },
         {
@@ -346,7 +346,7 @@
             2
           ],
           "top_procedure": 1,
-          "top_score": 0.701,
+          "top_score": 0.7024,
           "correct_procedure": true
         },
         {
@@ -398,7 +398,7 @@
             5
           ],
           "top_procedure": 5,
-          "top_score": 0.5788,
+          "top_score": 0.5733,
           "correct_procedure": true
         },
         {
@@ -428,7 +428,7 @@
             5
           ],
           "top_procedure": 5,
-          "top_score": 0.7524,
+          "top_score": 0.7479,
           "correct_procedure": true
         },
         {
@@ -438,7 +438,7 @@
             1
           ],
           "top_procedure": 1,
-          "top_score": 0.6814,
+          "top_score": 0.6827,
           "correct_procedure": true
         },
         {
@@ -508,7 +508,7 @@
             5
           ],
           "top_procedure": 5,
-          "top_score": 0.7292,
+          "top_score": 0.7246,
           "correct_procedure": true
         },
         {
@@ -571,7 +571,7 @@
             2
           ],
           "top_procedure": 1,
-          "top_score": 0.6042,
+          "top_score": 0.6027,
           "correct_procedure": false
         },
         {
@@ -676,7 +676,7 @@
           "type": "near_miss",
           "expected": [],
           "top_procedure": 5,
-          "top_score": 0.5918,
+          "top_score": 0.5894,
           "correct_procedure": false
         },
         {
@@ -684,7 +684,7 @@
           "type": "near_miss",
           "expected": [],
           "top_procedure": 1,
-          "top_score": 0.6068,
+          "top_score": 0.6074,
           "correct_procedure": false
         },
         {
@@ -692,7 +692,7 @@
           "type": "near_miss",
           "expected": [],
           "top_procedure": 1,
-          "top_score": 0.6236,
+          "top_score": 0.6266,
           "correct_procedure": false
         },
         {
@@ -700,7 +700,7 @@
           "type": "off_topic",
           "expected": [],
           "top_procedure": 1,
-          "top_score": 0.5073,
+          "top_score": 0.5107,
           "correct_procedure": false
         },
         {
@@ -716,7 +716,7 @@
           "type": "off_topic",
           "expected": [],
           "top_procedure": 1,
-          "top_score": 0.5399,
+          "top_score": 0.5397,
           "correct_procedure": false
         },
         {
@@ -724,8 +724,18 @@
           "type": "off_topic",
           "expected": [],
           "top_procedure": 1,
-          "top_score": 0.5008,
+          "top_score": 0.5016,
           "correct_procedure": false
+        },
+        {
+          "id": "q43",
+          "type": "paraphrase",
+          "expected": [
+            1
+          ],
+          "top_procedure": 1,
+          "top_score": 0.6226,
+          "correct_procedure": true
         }
       ]
     },
@@ -735,10 +745,10 @@
         "tasks": true
       },
       "summary": {
-        "retrieval_correct": 26,
-        "answerable_total": 28,
+        "retrieval_correct": 27,
+        "answerable_total": 29,
         "retrieval_direct": "10/10",
-        "retrieval_paraphrase": "16/18",
+        "retrieval_paraphrase": "17/19",
         "lowest_correct_answerable_score": 0.6261,
         "highest_unanswerable_score": 0.7,
         "at_current_threshold": {
@@ -746,303 +756,303 @@
           "answered_correctly": 13,
           "wrong_procedure_passed": 1,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.619
+          "overall_accuracy": 0.6047
         },
         "best": {
           "threshold": 0.63,
-          "answered_correctly": 24,
+          "answered_correctly": 25,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 11,
-          "overall_accuracy": 0.8333
+          "overall_accuracy": 0.8372
         }
       },
       "sweep": [
         {
           "threshold": 0.5,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.619
+          "overall_accuracy": 0.6279
         },
         {
           "threshold": 0.51,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.619
+          "overall_accuracy": 0.6279
         },
         {
           "threshold": 0.52,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.619
+          "overall_accuracy": 0.6279
         },
         {
           "threshold": 0.53,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.619
+          "overall_accuracy": 0.6279
         },
         {
           "threshold": 0.54,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.619
+          "overall_accuracy": 0.6279
         },
         {
           "threshold": 0.55,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.619
+          "overall_accuracy": 0.6279
         },
         {
           "threshold": 0.56,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 1,
-          "overall_accuracy": 0.6429
+          "overall_accuracy": 0.6512
         },
         {
           "threshold": 0.57,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
-          "abstained_correctly": 3,
-          "overall_accuracy": 0.6905
+          "abstained_correctly": 2,
+          "overall_accuracy": 0.6744
         },
         {
           "threshold": 0.58,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 3,
-          "overall_accuracy": 0.6905
+          "overall_accuracy": 0.6977
         },
         {
           "threshold": 0.59,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 3,
-          "overall_accuracy": 0.6905
+          "overall_accuracy": 0.6977
         },
         {
           "threshold": 0.6,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 4,
-          "overall_accuracy": 0.7143
+          "overall_accuracy": 0.7209
         },
         {
           "threshold": 0.61,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 6,
-          "overall_accuracy": 0.7619
+          "overall_accuracy": 0.7674
         },
         {
           "threshold": 0.62,
-          "answered_correctly": 26,
+          "answered_correctly": 27,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 7,
-          "overall_accuracy": 0.7857
+          "overall_accuracy": 0.7907
         },
         {
           "threshold": 0.63,
-          "answered_correctly": 24,
+          "answered_correctly": 25,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 11,
-          "overall_accuracy": 0.8333
+          "overall_accuracy": 0.8372
         },
         {
           "threshold": 0.64,
-          "answered_correctly": 23,
+          "answered_correctly": 24,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 11,
-          "overall_accuracy": 0.8095
+          "overall_accuracy": 0.814
         },
         {
           "threshold": 0.65,
-          "answered_correctly": 22,
+          "answered_correctly": 23,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 11,
-          "overall_accuracy": 0.7857
+          "overall_accuracy": 0.7907
         },
         {
           "threshold": 0.66,
-          "answered_correctly": 20,
+          "answered_correctly": 21,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 12,
-          "overall_accuracy": 0.7619
+          "overall_accuracy": 0.7674
         },
         {
           "threshold": 0.67,
           "answered_correctly": 20,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 12,
-          "overall_accuracy": 0.7619
+          "overall_accuracy": 0.7442
         },
         {
           "threshold": 0.68,
           "answered_correctly": 18,
           "wrong_procedure_passed": 2,
           "abstained_correctly": 12,
-          "overall_accuracy": 0.7143
+          "overall_accuracy": 0.6977
         },
         {
           "threshold": 0.69,
           "answered_correctly": 15,
           "wrong_procedure_passed": 1,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.6667
+          "overall_accuracy": 0.6512
         },
         {
           "threshold": 0.7,
           "answered_correctly": 13,
           "wrong_procedure_passed": 1,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.619
+          "overall_accuracy": 0.6047
         },
         {
           "threshold": 0.71,
-          "answered_correctly": 9,
+          "answered_correctly": 10,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.5476
+          "overall_accuracy": 0.5581
         },
         {
           "threshold": 0.72,
           "answered_correctly": 7,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.5
+          "overall_accuracy": 0.4884
         },
         {
           "threshold": 0.73,
           "answered_correctly": 6,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.4762
+          "overall_accuracy": 0.4651
         },
         {
           "threshold": 0.74,
           "answered_correctly": 3,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.4048
+          "overall_accuracy": 0.3953
         },
         {
           "threshold": 0.75,
-          "answered_correctly": 2,
+          "answered_correctly": 1,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.381
+          "overall_accuracy": 0.3488
         },
         {
           "threshold": 0.76,
           "answered_correctly": 1,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3571
+          "overall_accuracy": 0.3488
         },
         {
           "threshold": 0.77,
           "answered_correctly": 1,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3571
+          "overall_accuracy": 0.3488
         },
         {
           "threshold": 0.78,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.79,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.8,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.81,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.82,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.83,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.84,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.85,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.86,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.87,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.88,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.89,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.9,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         }
       ],
       "questions": [
@@ -1053,7 +1063,7 @@
             1
           ],
           "top_procedure": 1,
-          "top_score": 0.7075,
+          "top_score": 0.7108,
           "correct_procedure": true
         },
         {
@@ -1064,7 +1074,7 @@
             2
           ],
           "top_procedure": 1,
-          "top_score": 0.7195,
+          "top_score": 0.7188,
           "correct_procedure": true
         },
         {
@@ -1116,7 +1126,7 @@
             5
           ],
           "top_procedure": 5,
-          "top_score": 0.642,
+          "top_score": 0.6405,
           "correct_procedure": true
         },
         {
@@ -1146,7 +1156,7 @@
             5
           ],
           "top_procedure": 5,
-          "top_score": 0.7548,
+          "top_score": 0.7497,
           "correct_procedure": true
         },
         {
@@ -1156,7 +1166,7 @@
             1
           ],
           "top_procedure": 1,
-          "top_score": 0.7019,
+          "top_score": 0.7015,
           "correct_procedure": true
         },
         {
@@ -1226,7 +1236,7 @@
             5
           ],
           "top_procedure": 5,
-          "top_score": 0.7444,
+          "top_score": 0.7426,
           "correct_procedure": true
         },
         {
@@ -1394,7 +1404,7 @@
           "type": "near_miss",
           "expected": [],
           "top_procedure": 5,
-          "top_score": 0.6223,
+          "top_score": 0.623,
           "correct_procedure": false
         },
         {
@@ -1402,7 +1412,7 @@
           "type": "near_miss",
           "expected": [],
           "top_procedure": 1,
-          "top_score": 0.6271,
+          "top_score": 0.6269,
           "correct_procedure": false
         },
         {
@@ -1410,15 +1420,15 @@
           "type": "near_miss",
           "expected": [],
           "top_procedure": 1,
-          "top_score": 0.6512,
+          "top_score": 0.652,
           "correct_procedure": false
         },
         {
           "id": "q39",
           "type": "off_topic",
           "expected": [],
-          "top_procedure": 2,
-          "top_score": 0.5692,
+          "top_procedure": 1,
+          "top_score": 0.5716,
           "correct_procedure": false
         },
         {
@@ -1434,7 +1444,7 @@
           "type": "off_topic",
           "expected": [],
           "top_procedure": 1,
-          "top_score": 0.5954,
+          "top_score": 0.5948,
           "correct_procedure": false
         },
         {
@@ -1444,6 +1454,16 @@
           "top_procedure": 4,
           "top_score": 0.5652,
           "correct_procedure": false
+        },
+        {
+          "id": "q43",
+          "type": "paraphrase",
+          "expected": [
+            1
+          ],
+          "top_procedure": 1,
+          "top_score": 0.6666,
+          "correct_procedure": true
         }
       ]
     },
@@ -1453,314 +1473,314 @@
         "tasks": false
       },
       "summary": {
-        "retrieval_correct": 28,
-        "answerable_total": 28,
+        "retrieval_correct": 29,
+        "answerable_total": 29,
         "retrieval_direct": "10/10",
-        "retrieval_paraphrase": "18/18",
+        "retrieval_paraphrase": "19/19",
         "lowest_correct_answerable_score": 0.6913,
         "highest_unanswerable_score": 0.7224,
         "at_current_threshold": {
           "threshold": 0.7,
-          "answered_correctly": 25,
+          "answered_correctly": 26,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.9048
+          "overall_accuracy": 0.907
         },
         "best": {
           "threshold": 0.69,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.9762
+          "overall_accuracy": 0.9767
         }
       },
       "sweep": [
         {
           "threshold": 0.5,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.6667
+          "overall_accuracy": 0.6744
         },
         {
           "threshold": 0.51,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.6667
+          "overall_accuracy": 0.6744
         },
         {
           "threshold": 0.52,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 1,
-          "overall_accuracy": 0.6905
+          "overall_accuracy": 0.6977
         },
         {
           "threshold": 0.53,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 2,
-          "overall_accuracy": 0.7143
+          "overall_accuracy": 0.7209
         },
         {
           "threshold": 0.54,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 2,
-          "overall_accuracy": 0.7143
+          "overall_accuracy": 0.7209
         },
         {
           "threshold": 0.55,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 3,
-          "overall_accuracy": 0.7381
+          "overall_accuracy": 0.7442
         },
         {
           "threshold": 0.56,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 4,
-          "overall_accuracy": 0.7619
+          "overall_accuracy": 0.7674
         },
         {
           "threshold": 0.57,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 4,
-          "overall_accuracy": 0.7619
+          "overall_accuracy": 0.7674
         },
         {
           "threshold": 0.58,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 4,
-          "overall_accuracy": 0.7619
+          "overall_accuracy": 0.7674
         },
         {
           "threshold": 0.59,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 4,
-          "overall_accuracy": 0.7619
+          "overall_accuracy": 0.7674
         },
         {
           "threshold": 0.6,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 6,
-          "overall_accuracy": 0.8095
+          "overall_accuracy": 0.814
         },
         {
           "threshold": 0.61,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 6,
-          "overall_accuracy": 0.8095
+          "overall_accuracy": 0.814
         },
         {
           "threshold": 0.62,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 6,
-          "overall_accuracy": 0.8095
+          "overall_accuracy": 0.814
         },
         {
           "threshold": 0.63,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 7,
-          "overall_accuracy": 0.8333
+          "overall_accuracy": 0.8372
         },
         {
           "threshold": 0.64,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 9,
-          "overall_accuracy": 0.881
+          "overall_accuracy": 0.8837
         },
         {
           "threshold": 0.65,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 10,
-          "overall_accuracy": 0.9048
+          "overall_accuracy": 0.907
         },
         {
           "threshold": 0.66,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 12,
-          "overall_accuracy": 0.9524
+          "overall_accuracy": 0.9535
         },
         {
           "threshold": 0.67,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 12,
-          "overall_accuracy": 0.9524
+          "overall_accuracy": 0.9535
         },
         {
           "threshold": 0.68,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.9762
+          "overall_accuracy": 0.9767
         },
         {
           "threshold": 0.69,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.9762
+          "overall_accuracy": 0.9767
         },
         {
           "threshold": 0.7,
-          "answered_correctly": 25,
+          "answered_correctly": 26,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.9048
+          "overall_accuracy": 0.907
         },
         {
           "threshold": 0.71,
           "answered_correctly": 24,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.881
+          "overall_accuracy": 0.8605
         },
         {
           "threshold": 0.72,
           "answered_correctly": 22,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 13,
-          "overall_accuracy": 0.8333
+          "overall_accuracy": 0.814
         },
         {
           "threshold": 0.73,
           "answered_correctly": 20,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.8095
+          "overall_accuracy": 0.7907
         },
         {
           "threshold": 0.74,
           "answered_correctly": 19,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.7857
+          "overall_accuracy": 0.7674
         },
         {
           "threshold": 0.75,
           "answered_correctly": 16,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.7143
+          "overall_accuracy": 0.6977
         },
         {
           "threshold": 0.76,
           "answered_correctly": 14,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.6667
+          "overall_accuracy": 0.6512
         },
         {
           "threshold": 0.77,
           "answered_correctly": 11,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.5952
+          "overall_accuracy": 0.5814
         },
         {
           "threshold": 0.78,
-          "answered_correctly": 9,
+          "answered_correctly": 8,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.5476
+          "overall_accuracy": 0.5116
         },
         {
           "threshold": 0.79,
           "answered_correctly": 6,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.4762
+          "overall_accuracy": 0.4651
         },
         {
           "threshold": 0.8,
-          "answered_correctly": 5,
+          "answered_correctly": 4,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.4524
+          "overall_accuracy": 0.4186
         },
         {
           "threshold": 0.81,
-          "answered_correctly": 3,
+          "answered_correctly": 2,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.4048
+          "overall_accuracy": 0.3721
         },
         {
           "threshold": 0.82,
           "answered_correctly": 2,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.381
+          "overall_accuracy": 0.3721
         },
         {
           "threshold": 0.83,
           "answered_correctly": 2,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.381
+          "overall_accuracy": 0.3721
         },
         {
           "threshold": 0.84,
           "answered_correctly": 1,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3571
+          "overall_accuracy": 0.3488
         },
         {
           "threshold": 0.85,
           "answered_correctly": 1,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3571
+          "overall_accuracy": 0.3488
         },
         {
           "threshold": 0.86,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.87,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.88,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.89,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.9,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         }
       ],
       "questions": [
@@ -1771,7 +1791,7 @@
             1
           ],
           "top_procedure": 1,
-          "top_score": 0.7803,
+          "top_score": 0.7787,
           "correct_procedure": true
         },
         {
@@ -1864,7 +1884,7 @@
             5
           ],
           "top_procedure": 5,
-          "top_score": 0.8199,
+          "top_score": 0.7911,
           "correct_procedure": true
         },
         {
@@ -2128,7 +2148,7 @@
           "type": "near_miss",
           "expected": [],
           "top_procedure": 1,
-          "top_score": 0.6505,
+          "top_score": 0.65,
           "correct_procedure": false
         },
         {
@@ -2136,7 +2156,7 @@
           "type": "off_topic",
           "expected": [],
           "top_procedure": 1,
-          "top_score": 0.545,
+          "top_score": 0.5482,
           "correct_procedure": false
         },
         {
@@ -2162,6 +2182,16 @@
           "top_procedure": 4,
           "top_score": 0.5271,
           "correct_procedure": false
+        },
+        {
+          "id": "q43",
+          "type": "paraphrase",
+          "expected": [
+            1
+          ],
+          "top_procedure": 1,
+          "top_score": 0.701,
+          "correct_procedure": true
         }
       ]
     },
@@ -2171,314 +2201,314 @@
         "tasks": true
       },
       "summary": {
-        "retrieval_correct": 28,
-        "answerable_total": 28,
+        "retrieval_correct": 29,
+        "answerable_total": 29,
         "retrieval_direct": "10/10",
-        "retrieval_paraphrase": "18/18",
-        "lowest_correct_answerable_score": 0.7078,
+        "retrieval_paraphrase": "19/19",
+        "lowest_correct_answerable_score": 0.705,
         "highest_unanswerable_score": 0.7084,
         "at_current_threshold": {
           "threshold": 0.7,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 12,
-          "overall_accuracy": 0.9524
+          "overall_accuracy": 0.9535
         },
         "best": {
-          "threshold": 0.71,
-          "answered_correctly": 27,
+          "threshold": 0.7,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
-          "abstained_correctly": 14,
-          "overall_accuracy": 0.9762
+          "abstained_correctly": 12,
+          "overall_accuracy": 0.9535
         }
       },
       "sweep": [
         {
           "threshold": 0.5,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.6667
+          "overall_accuracy": 0.6744
         },
         {
           "threshold": 0.51,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.6667
+          "overall_accuracy": 0.6744
         },
         {
           "threshold": 0.52,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.6667
+          "overall_accuracy": 0.6744
         },
         {
           "threshold": 0.53,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.6667
+          "overall_accuracy": 0.6744
         },
         {
           "threshold": 0.54,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.6667
+          "overall_accuracy": 0.6744
         },
         {
           "threshold": 0.55,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 0,
-          "overall_accuracy": 0.6667
+          "overall_accuracy": 0.6744
         },
         {
           "threshold": 0.56,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 1,
-          "overall_accuracy": 0.6905
+          "overall_accuracy": 0.6977
         },
         {
           "threshold": 0.57,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 1,
-          "overall_accuracy": 0.6905
+          "overall_accuracy": 0.6977
         },
         {
           "threshold": 0.58,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 1,
-          "overall_accuracy": 0.6905
+          "overall_accuracy": 0.6977
         },
         {
           "threshold": 0.59,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 2,
-          "overall_accuracy": 0.7143
+          "overall_accuracy": 0.7209
         },
         {
           "threshold": 0.6,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 2,
-          "overall_accuracy": 0.7143
+          "overall_accuracy": 0.7209
         },
         {
           "threshold": 0.61,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 3,
-          "overall_accuracy": 0.7381
+          "overall_accuracy": 0.7442
         },
         {
           "threshold": 0.62,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 5,
-          "overall_accuracy": 0.7857
+          "overall_accuracy": 0.7907
         },
         {
           "threshold": 0.63,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 5,
-          "overall_accuracy": 0.7857
+          "overall_accuracy": 0.7907
         },
         {
           "threshold": 0.64,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 6,
-          "overall_accuracy": 0.8095
+          "overall_accuracy": 0.814
         },
         {
           "threshold": 0.65,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 8,
-          "overall_accuracy": 0.8571
+          "overall_accuracy": 0.8605
         },
         {
           "threshold": 0.66,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 10,
-          "overall_accuracy": 0.9048
+          "overall_accuracy": 0.907
         },
         {
           "threshold": 0.67,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 11,
-          "overall_accuracy": 0.9286
+          "overall_accuracy": 0.9302
         },
         {
           "threshold": 0.68,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 12,
-          "overall_accuracy": 0.9524
+          "overall_accuracy": 0.9535
         },
         {
           "threshold": 0.69,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 12,
-          "overall_accuracy": 0.9524
+          "overall_accuracy": 0.9535
         },
         {
           "threshold": 0.7,
-          "answered_correctly": 28,
+          "answered_correctly": 29,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 12,
-          "overall_accuracy": 0.9524
+          "overall_accuracy": 0.9535
         },
         {
           "threshold": 0.71,
           "answered_correctly": 27,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.9762
+          "overall_accuracy": 0.9535
         },
         {
           "threshold": 0.72,
           "answered_correctly": 24,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.9048
+          "overall_accuracy": 0.8837
         },
         {
           "threshold": 0.73,
           "answered_correctly": 20,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.8095
+          "overall_accuracy": 0.7907
         },
         {
           "threshold": 0.74,
           "answered_correctly": 17,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.7381
+          "overall_accuracy": 0.7209
         },
         {
           "threshold": 0.75,
           "answered_correctly": 13,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.6429
+          "overall_accuracy": 0.6279
         },
         {
           "threshold": 0.76,
           "answered_correctly": 10,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.5714
+          "overall_accuracy": 0.5581
         },
         {
           "threshold": 0.77,
           "answered_correctly": 8,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.5238
+          "overall_accuracy": 0.5116
         },
         {
           "threshold": 0.78,
-          "answered_correctly": 7,
+          "answered_correctly": 6,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.5
+          "overall_accuracy": 0.4651
         },
         {
           "threshold": 0.79,
-          "answered_correctly": 4,
+          "answered_correctly": 3,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.4286
+          "overall_accuracy": 0.3953
         },
         {
           "threshold": 0.8,
           "answered_correctly": 2,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.381
+          "overall_accuracy": 0.3721
         },
         {
           "threshold": 0.81,
           "answered_correctly": 1,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3571
+          "overall_accuracy": 0.3488
         },
         {
           "threshold": 0.82,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.83,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.84,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.85,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.86,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.87,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.88,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.89,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         },
         {
           "threshold": 0.9,
           "answered_correctly": 0,
           "wrong_procedure_passed": 0,
           "abstained_correctly": 14,
-          "overall_accuracy": 0.3333
+          "overall_accuracy": 0.3256
         }
       ],
       "questions": [
@@ -2489,7 +2519,7 @@
             1
           ],
           "top_procedure": 1,
-          "top_score": 0.7361,
+          "top_score": 0.7318,
           "correct_procedure": true
         },
         {
@@ -2582,7 +2612,7 @@
             5
           ],
           "top_procedure": 5,
-          "top_score": 0.7915,
+          "top_score": 0.7753,
           "correct_procedure": true
         },
         {
@@ -2880,6 +2910,16 @@
           "top_procedure": 4,
           "top_score": 0.5824,
           "correct_procedure": false
+        },
+        {
+          "id": "q43",
+          "type": "paraphrase",
+          "expected": [
+            1
+          ],
+          "top_procedure": 1,
+          "top_score": 0.705,
+          "correct_procedure": true
         }
       ]
     }
