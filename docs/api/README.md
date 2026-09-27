@@ -154,3 +154,15 @@ Request: `title`, `steps`, `warnings`, and the `procedure_id` of the draft or pr
 ```
 
 Approval is all or nothing: if embedding fails, nothing is saved. `resolved_gaps` counts the open knowledge gaps this procedure now answers, which are resolved automatically.
+
+### Change a role: `PATCH /api/business/users/{user_id}/role`
+
+```json
+{ "role": "owner" }
+```
+
+Returns the updated user (`id`, `name`, `email`, `role`). Returns `400` if the role is not `owner` or `employee`, or if the user is the caller: owners cannot change their own role, so the business always keeps at least one owner. Returns `404` if the user does not exist.
+
+### Delete an employee: `DELETE /api/business/users/{user_id}`
+
+Returns `{ "message": "Employee account deleted." }`. Owner accounts cannot be deleted (`400`). The deleted person's next request is rejected with `401`, because every request reloads the user from the database.
