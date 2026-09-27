@@ -82,18 +82,16 @@ flowchart LR
 ## Knowledge gap lifecycle
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Open: a question is abstained
-    Open --> Open: asked again with the same meaning
-    Open --> Resolved: an approved procedure answers it
-    Open --> Dismissed: the owner dismisses it
-    Resolved --> Open: the resolving procedure is deleted
-    note right of Dismissed: Asking again later opens a new gap
+flowchart LR
+    Q(["Question<br/>abstained"]) --> Open
+    Open -- "approved procedure<br/>answers it" --> Resolved
+    Resolved -- "that procedure<br/>is deleted" --> Open
+    Open -- "owner<br/>dismisses" --> Dismissed
 ```
 
-- **Grouping:** a new unanswered question joins an open gap when their similarity is at least 0.75, adding to its "Asked N times" count. Every distinct wording is kept ("Also Asked As"), because topic similarity cannot always tell two different questions apart.
+- **Grouping:** a new unanswered question joins an open gap when their similarity is at least 0.75. The gap stays open, and its "Asked N times" count goes up. Every distinct wording is kept ("Also Asked As"), because topic similarity cannot always tell two different questions apart.
+- **Dismissed gaps stay dismissed.** If an employee asks the same thing later, it opens a new gap, so a dismissal never silently swallows future questions.
 - **Auto-resolve** uses the same test as the Threshold Gate. Adding the Generation Gate here is planned (see Limitations in the [README](../../README.md#known-limitations)).
-
 ## Delivery: CI/CD
 
 ```mermaid
