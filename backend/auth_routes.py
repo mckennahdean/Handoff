@@ -3,6 +3,10 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from backend.database import engine
 
 from backend.auth_service import (
     authenticate_user,
@@ -18,6 +22,7 @@ from backend.auth_service import (
     regenerate_invite_code,
     require_owner,
 )
+
 from backend.models import User
 
 
@@ -36,6 +41,8 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class UserRoleUpdate(BaseModel):
+    role: str
 
 def normalize_email(email: str) -> str:
     return email.strip().lower()
@@ -95,6 +102,7 @@ def signup(request: SignupRequest):
     # Check the invite code BEFORE checking for duplicate emails,
     # so someone without a valid code cannot probe which emails
     # already have accounts.
+
     if is_first_account:
         business_name = (request.business_name or "").strip()
 
@@ -186,4 +194,76 @@ def get_invite_code():
 def new_invite_code():
     return {
         "invite_code": regenerate_invite_code()
+    }
+
+
+# Return the users who have access to the business.
+@router.get(
+    "/api/business/users",
+    dependencies=[Depends(require_owner)]
+)
+def get_users():
+    with Session(engine) as session:
+        users = session.scalars(
+            select(User).order_by(User.name)
+        ).all()
+
+    return [user_to_dict(user) for user in users]
+
+# Update a user's role.
+@router.patch(
+    "/api/business/users/{user_id}/role",
+    dependencies=[Depends(require_owner)]
+)
+def update_user_role(user_id: int, request: UserRoleUpdate):
+    role = request.role 
+
+    if role not in {"owner", "employee"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Role must be owner or employee."
+        )
+
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+
+        if user is None:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found."
+            )
+
+        user.role = role
+        session.commit()
+        session.refresh(user)
+
+    return user_to_dict(user)
+
+
+# Delete an employee account.
+@router.delete(
+    "/api/business/users/{user_id}",
+    dependencies=[Depends(require_owner)]
+)
+def delete_user(user_id: int):
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+
+        if user is None:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found."
+            )
+
+        if user.role != "employee":
+            raise HTTPException(
+                status_code=400,
+                detail="Only employee accounts can be deleted."
+            )
+
+        session.delete(user)
+        session.commit()
+
+    return {
+        "message": "Employee account deleted."
     }
