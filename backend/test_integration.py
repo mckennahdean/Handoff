@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 import backend.db_service as db_service
 from backend.models import Base, Gap, ProcedureChunk
+import backend.seed_demo as seed_demo
 
 load_dotenv()
 
@@ -242,3 +243,11 @@ def test_asking_again_after_dismissal_opens_a_new_gap(db):
     assert again.id != gap.id
     assert again.status == "open"
     assert again.frequency_count == 1
+
+def test_seed_demo_adds_each_procedure_once(db):
+    first_run = seed_demo.seed(pause_seconds=0)
+    second_run = seed_demo.seed(pause_seconds=0)
+
+    assert first_run == 7
+    assert second_run == 0
+    assert len(db_service.get_procedures()) == 7
