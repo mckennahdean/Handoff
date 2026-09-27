@@ -35,6 +35,12 @@ client = None
 class MergeAlteredContentError(Exception):
     """Raised when the AI changes or drops the owner's existing text."""
 
+class AIQuotaError(Exception):
+    """The AI provider's rate limit or daily quota was reached."""
+
+
+class AIBusyError(Exception):
+    """The AI provider stayed overloaded after every retry."""
 
 def get_client():
     global client
@@ -61,6 +67,19 @@ def _is_transient(error) -> bool:
     return isinstance(error, errors.ServerError)
 
 
+def _provider_neutral(error):
+    """Translate Gemini's limit and outage errors into Handoff's own,
+    so no other module depends on the provider's error types.
+    Returns None for errors that need no translation."""
+    if error.code == 429:
+        return AIQuotaError(str(error))
+
+    if _is_transient(error):
+        return AIBusyError(str(error))
+
+    return None
+
+
 def _with_retry(call, **kwargs):
     """Run a Gemini call, retrying temporary failures with backoff."""
     for attempt in range(1, MAX_ATTEMPTS + 1):
@@ -68,10 +87,16 @@ def _with_retry(call, **kwargs):
             return call(**kwargs)
 
         except errors.APIError as error:
-            if attempt == MAX_ATTEMPTS or not _is_transient(error):
+            if attempt < MAX_ATTEMPTS and _is_transient(error):
+                time.sleep(2 ** (attempt - 1))  # wait 1s, then 2s
+                continue
+
+            translated = _provider_neutral(error)
+
+            if translated is None:
                 raise
 
-            time.sleep(2 ** (attempt - 1))  # wait 1s, then 2s
+            raise translated from error
 
 
 def _generate(**kwargs):

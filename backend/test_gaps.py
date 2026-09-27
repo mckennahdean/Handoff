@@ -265,6 +265,49 @@ def test_generate_does_not_retry_bad_requests(monkeypatch):
 
     assert calls["count"] == 1
 
+def test_generate_turns_rate_limits_into_quota_error(monkeypatch):
+    calls = {"count": 0}
+
+    def rate_limited(**kwargs):
+        calls["count"] += 1
+        raise errors.ClientError(429, {"error": {"message": "quota"}})
+
+    monkeypatch.setattr(
+        gemini_service,
+        "get_client",
+        lambda: SimpleNamespace(
+            models=SimpleNamespace(generate_content=rate_limited)
+        )
+    )
+
+    with pytest.raises(gemini_service.AIQuotaError):
+        gemini_service._generate(model="test", contents="test")
+
+    # A quota limit will not clear in seconds, so no retry.
+    assert calls["count"] == 1
+
+
+def test_generate_reports_busy_after_retries_run_out(monkeypatch):
+    calls = {"count": 0}
+
+    def always_busy(**kwargs):
+        calls["count"] += 1
+        raise errors.ServerError(503, {"error": {"message": "busy"}})
+
+    monkeypatch.setattr(
+        gemini_service,
+        "get_client",
+        lambda: SimpleNamespace(
+            models=SimpleNamespace(generate_content=always_busy)
+        )
+    )
+    monkeypatch.setattr(gemini_service.time, "sleep", lambda seconds: None)
+
+    with pytest.raises(gemini_service.AIBusyError):
+        gemini_service._generate(model="test", contents="test")
+
+    assert calls["count"] == gemini_service.MAX_ATTEMPTS
+
 def test_embed_texts_returns_one_vector_per_text(monkeypatch):
     fake_models = SimpleNamespace(
         embed_content=lambda **kwargs: SimpleNamespace(
