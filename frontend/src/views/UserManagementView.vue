@@ -26,12 +26,13 @@ const loadUsers = async () => {
 
   try {
     const response = await apiFetch('/api/business/users')
+    const data = await response.json()
 
     if (!response.ok) {
-      throw new Error(await errorMessage(response))
+      throw new Error(errorMessage(data, 'Unable to load users.'))
     }
 
-    users.value = await response.json()
+    users.value = data
   } catch (err) {
     error.value = err.message || 'Unable to load users.'
   } finally {
@@ -47,25 +48,27 @@ const updateRole = async (user) => {
 
   try {
     const response = await apiFetch(
-  `/api/business/users/${user.id}/role`,
-  {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      role: user.role
-    })
-  }
-)
+      `/api/business/users/${user.id}/role`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          role: user.role
+        })
+      }
+    )
+
+    const data = await response.json()
 
     if (!response.ok) {
-      throw new Error(await errorMessage(response))
+      throw new Error(
+        errorMessage(data, 'Unable to update the user role.')
+      )
     }
 
-    const updatedUser = await response.json()
-
-    user.role = updatedUser.role
+    user.role = data.role
     message.value = `${user.name}'s role was updated.`
   } catch (err) {
     error.value = err.message || 'Unable to update the user role.'
@@ -103,8 +106,12 @@ const deleteEmployee = async (user) => {
       }
     )
 
+    const data = await response.json()
+
     if (!response.ok) {
-      throw new Error(await errorMessage(response))
+      throw new Error(
+        errorMessage(data, 'Unable to delete the employee account.')
+      )
     }
 
     users.value = users.value.filter(
