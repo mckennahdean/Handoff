@@ -42,6 +42,23 @@ const loadUsers = async () => {
 
 // Update a user's Owner or Employee role.
 const updateRole = async (user) => {
+
+  // Owner access is the most powerful permission, so confirm first.
+  const granting = user.role === 'owner'
+
+  const confirmed = window.confirm(
+    granting
+      ? `Give ${user.name} owner access? Owners can approve and delete ` +
+        'procedures, see knowledge gaps, and manage every account.'
+      : `Remove ${user.name}'s owner access? They will become an employee.`
+  )
+
+  if (!confirmed) {
+    // The dropdown already changed, so put it back.
+    user.role = granting ? 'employee' : 'owner'
+    return
+  }
+
   savingRoleId.value = user.id
   message.value = ''
   error.value = ''
