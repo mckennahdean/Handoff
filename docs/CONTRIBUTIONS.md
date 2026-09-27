@@ -21,7 +21,7 @@ Handoff was built by a three-person team for UMGC CMSC 495, Computer Science Cap
 | #3 `feature/ci-cd` | First CI pipeline | Thomas Dean | Thomas Dean |
 | #4 `hotfix/embedding-model-name-regression` | Fix for a renamed embedding model | Thomas Dean | Thomas Dean |
 | #5 `q2-final-push` | Authentication, capture gaps, knowledge gaps, evaluation, Docker, CI/CD | Thomas Dean | McKenna Dean, after review |
-| #6 `q3-docs-and-polish` | Documentation, security fixes, demo data, polish | Thomas Dean | [who merged], after review |
+| #6 `q3-docs-and-polish` | Documentation, security fixes, demo data, polish | Thomas Dean | Thomas Dean |
 | #7 `feature/user-management-404` | User management and custom 404 page | McKenna Dean | Thomas Dean, after review |
 | #8 `fix/user-management-followups` | Server-side role rules, tests, and user management fixes | Thomas Dean | In review |
 
