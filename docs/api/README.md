@@ -68,6 +68,9 @@ Errors return JSON with a readable `detail` message:
 | POST | `/api/gaps/{gap_id}/dismiss` | Dismiss a knowledge gap |
 | GET | `/api/business/invite-code` | The current invite code |
 | POST | `/api/business/invite-code/regenerate` | Replace the invite code |
+| GET | `/api/business/users` | List everyone with access |
+| PATCH | `/api/business/users/{user_id}/role` | Change a user's role (not your own) |
+| DELETE | `/api/business/users/{user_id}` | Delete an employee account |
 
 ## Request and response details
 
