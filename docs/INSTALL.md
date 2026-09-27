@@ -2,122 +2,158 @@
 
 There are two ways to run Handoff:
 
-- **Docker** (recommended for trying it out): the whole app runs in containers. You only need Docker Desktop and Git.
+- **Docker** (recommended for trying it out): the whole app runs in containers.
 - **Developer setup**: the backend and frontend run directly on your machine, so code changes appear immediately. Use this to work on Handoff.
 
-Both need a Gemini API key. The free tier is enough: get one at https://aistudio.google.com/apikey.
+Both start with the same first step. No administrator rights are needed for any step.
 
-## Option 1: Docker
+## Step 1: Get the code and configure it
 
-### Requirements
+Everyone does this step. You need **Git** and a **Gemini API key** (the free tier is enough: get one at https://aistudio.google.com/apikey).
 
-- Docker Desktop (running)
-- Git
-
-### Steps
-
-1. Clone the repository:
+Clone the repository:
 
 ```
-   git clone https://github.com/mckennahdean/Handoff.git
-   cd Handoff
+git clone https://github.com/mckennahdean/Handoff.git
+cd Handoff
 ```
 
-2. Create your settings file from the example:
+Create your settings file from the example:
 
 ```
-   cp backend/.env.example .env
+cp backend/.env.example .env
 ```
 
-3. Open `.env` in a text editor and fill in two values:
+Open `.env` in a text editor and fill in two values:
 
-   - `GEMINI_API_KEY`: your Gemini API key.
-   - `JWT_SECRET_KEY`: a random secret that signs login tokens. Generate one with the command below, then paste the output after the `=`:
+- `GEMINI_API_KEY`: your Gemini API key.
+- `JWT_SECRET_KEY`: a random secret that signs login tokens. Every install needs its own. Generate one with the command below, then paste the output after the `=`.
 
-```
-     python -c "import secrets; print(secrets.token_hex(32))"
-```
-
-   Leave the other settings as they are. `DATABASE_URL` points at `localhost`, which is correct for the developer setup; Docker Compose replaces it automatically inside the containers.
-
-4. Build and start the database, backend, and frontend:
+If you have Docker Desktop (it must be running):
 
 ```
-   docker compose up --build -d
+docker run --rm python:3.13-slim python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-   The first build takes a few minutes. Check that all three containers report `healthy`:
+If you have Python instead:
 
 ```
-   docker compose ps
+python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-5. (Optional) Load the demo data, seven procedures for Maple & Main Coffee, a fictional coffee shop:
+Leave the other settings as they are. `DATABASE_URL` points at `localhost`, which is correct for the developer setup; Docker Compose replaces it automatically inside the containers.
+
+## Step 2: Choose how to run Handoff
+
+- [Option A: Docker](#option-a-docker), to try Handoff or run it for a team
+- [Option B: Developer setup](#option-b-developer-setup), to work on the code
+
+## Option A: Docker
+
+**Also requires:** Docker Desktop, running.
+
+### Start Handoff
+
+Build and start the database, backend, and frontend:
 
 ```
-   docker compose exec backend python -m backend.seed_demo
+docker compose up --build -d
 ```
 
-   This takes about two minutes, because it pauses between procedures to stay under the free tier's embedding limit. It is safe to run again: procedures that already exist are skipped.
-
-6. Open http://localhost:8080 and create an account. **The first account becomes the owner.** Passwords need at least 12 characters, with uppercase and lowercase letters, a number, and a special character.
-
-7. To add employees, copy the invite code from the Team Access card on the owner dashboard. Employees enter it when they sign up.
-
-### Stopping and updating
+The first build takes a few minutes. Then check the containers:
 
 ```
-docker compose down          # stops the app; your data is kept
+docker compose ps
+```
+
+The database and backend should report `healthy`, and the frontend should report `Up`.
+
+### Load the demo data (optional)
+
+This adds seven procedures for Maple & Main Coffee, a fictional coffee shop:
+
+```
+docker compose exec backend python -m backend.seed_demo
+```
+
+It takes about two minutes, because it pauses between procedures to stay under the free tier's embedding limit. It is safe to run again: procedures that already exist are skipped.
+
+### Create the owner account
+
+Open http://localhost:8080 and sign up. **The first account becomes the owner.** Passwords need at least 12 characters, with uppercase and lowercase letters, a number, and a special character.
+
+To add employees, copy the invite code from the Team Access card on the owner dashboard. Employees enter it when they sign up.
+
+### Stop and update
+
+Stop the app (your data is kept):
+
+```
+docker compose down
+```
+
+Update to the latest code and rebuild:
+
+```
 git pull
-docker compose up --build -d # rebuilds with the latest code
+docker compose up --build -d
 ```
 
 > **Warning:** `docker compose down -v` also deletes the database volume, which permanently erases every procedure, account, and knowledge gap. See [Backing up your data](#backing-up-your-data) first.
 
-## Option 2: Developer setup
+## Option B: Developer setup
 
-### Requirements
-
-- Python 3.13 or later
-- Node.js 22 LTS
-- Docker Desktop (for the database)
-- Git
+**Also requires:** Python 3.13 or later, Node.js 22 LTS, and Docker Desktop (for the database).
 
 ### One-time setup
 
-1. Clone the repository and create `.env` exactly as in Docker steps 1 to 3 above. Keep `.env` in the repository root.
+Create a Python virtual environment and install the backend's packages into it.
 
-2. Create a Python virtual environment and install the backend dependencies.
-
-   Windows (PowerShell):
+Windows (PowerShell):
 
 ```
-   python -m venv .venv
-   .venv\Scripts\Activate.ps1
-   pip install -r backend/requirements.txt
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r backend/requirements.txt
 ```
 
-   macOS or Linux:
+macOS or Linux:
 
 ```
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r backend/requirements.txt
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
 ```
 
-3. Install the frontend dependencies:
+If Windows says running scripts is disabled, see [Troubleshooting](#troubleshooting).
+
+Install the frontend's packages:
 
 ```
-   cd frontend
-   npm install
-   cd ..
+cd frontend
+npm install
+cd ..
 ```
 
 ### Every time you work on Handoff
 
-Use two terminals, both in the repository root, with the virtual environment active in the first.
+Use two terminals, both starting in the repository root.
 
-**Terminal 1: database and backend**
+**Terminal 1: database and backend.** First activate the virtual environment. Do this in every new terminal, because the backend's packages are installed there, not system-wide. Your prompt should then begin with `(.venv)`.
+
+Windows (PowerShell):
+
+```
+.venv\Scripts\Activate.ps1
+```
+
+macOS or Linux:
+
+```
+source .venv/bin/activate
+```
+
+Then start the database and the backend:
 
 ```
 docker compose up -d db
@@ -127,16 +163,14 @@ python -m uvicorn backend.main:app --reload
 
 `create_tables` is safe to run every time: it creates missing tables and applies small schema updates, and does nothing when the database is already current. The backend serves at http://127.0.0.1:8000, with interactive API documentation at http://127.0.0.1:8000/docs.
 
-**Terminal 2: frontend**
+**Terminal 2: frontend.** No virtual environment is needed here: npm keeps the frontend's packages in `frontend/node_modules`, inside the project.
 
 ```
 cd frontend
 npm run dev
 ```
 
-Open http://localhost:5173. To load the demo data in this setup, run `python -m backend.seed_demo` from the repository root.
-
-If the Docker version of Handoff is also running, stop its backend and frontend first so the ports are free: `docker compose stop backend frontend`.
+Open http://localhost:5173. To load the demo data, run `python -m backend.seed_demo` in Terminal 1's environment (from the repository root, with `(.venv)` active).
 
 ## Configuration
 
@@ -155,7 +189,7 @@ All settings live in `.env` in the repository root. `backend/.env.example` docum
 
 ## Running the tests
 
-Backend tests (from the repository root, virtual environment active):
+These use the developer setup. With the virtual environment active, from the repository root:
 
 ```
 python -m pytest backend/ -v --ignore=backend/test.py --ignore=backend/test_embedding.py
@@ -163,17 +197,21 @@ python -m pytest backend/ -v --ignore=backend/test.py --ignore=backend/test_embe
 
 The AI is replaced by a fake in every test, so tests are free, fast, and repeatable.
 
-**Integration tests** run the real database code against PostgreSQL. They need their own database, because every run deletes and recreates all of its tables:
+### Integration tests
 
-1. Create the test database once:
+Integration tests run the real database code against PostgreSQL. They need their own database, because every run deletes and recreates all of its tables. Set it up once, in this order.
+
+First, with the database running, create the test database:
 
 ```
-   docker exec handoff-db psql -U handoff_user -d handoff -c "CREATE DATABASE handoff_test;"
+docker exec handoff-db psql -U handoff_user -d handoff -c "CREATE DATABASE handoff_test;"
 ```
 
-2. In `.env`, remove the `#` in front of the `TEST_DATABASE_URL` line.
+Then, in `.env`, remove the `#` in front of the `TEST_DATABASE_URL` line.
 
 Without `TEST_DATABASE_URL`, integration tests are skipped rather than failed. As a safety check, they refuse to run against any database without "test" in its name.
+
+### Coverage and lint
 
 Coverage report:
 
@@ -208,7 +246,15 @@ docker exec handoff-db pg_restore -U handoff_user -d handoff --clean /tmp/handof
 
 ## Troubleshooting
 
-**"JWT_SECRET_KEY is not configured" when signing up or logging in.** `.env` has no secret. Generate one (Docker step 3), then restart the backend.
+**"JWT_SECRET_KEY is not configured" when signing up or logging in.** `.env` has no secret. Generate one as in [Step 1](#step-1-get-the-code-and-configure-it), then restart the backend.
+
+**"No module named ..." (for example `sqlalchemy` or `uvicorn`).** The virtual environment is not active in that terminal. Activate it as in [Every time you work on Handoff](#every-time-you-work-on-handoff); your prompt should begin with `(.venv)`.
+
+**Windows says "running scripts is disabled on this system" when activating the virtual environment.** PowerShell blocks scripts by default. Allow local scripts for your user account (no administrator rights needed), then activate again:
+
+```
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
 
 **I changed `.env` but nothing changed.** Settings are read when the backend starts. In the developer setup, stop uvicorn (`Ctrl + C`) and start it again; `--reload` watches code files, not `.env`. In Docker, recreate the backend container, because `restart` keeps the old settings:
 
@@ -222,9 +268,15 @@ docker compose up -d --force-recreate backend
 
 **The demo seed stopped partway.** Usually a usage limit. Run it again: procedures that were already added are skipped.
 
-**Integration tests show as SKIPPED.** `TEST_DATABASE_URL` is not set. See [Running the tests](#running-the-tests).
+**Integration tests show as SKIPPED.** `TEST_DATABASE_URL` is not set. See [Integration tests](#integration-tests).
 
-**A port is already in use (5432, 8000, 5173, or 8080).** Another copy of Handoff, or another program, is using it. `docker compose ps` shows what Docker is running; stop the Docker backend and frontend before using the developer setup.
+**Integration tests show ERROR with `database "handoff_test" does not exist`.** The test database has not been created yet. Run the `CREATE DATABASE` command in [Integration tests](#integration-tests).
+
+**A port is already in use (5432, 8000, 5173, or 8080).** Usually the Docker version and the developer setup are running at the same time. `docker compose ps` shows what Docker is running. Stop the Docker backend and frontend before starting the developer setup:
+
+```
+docker compose stop backend frontend
+```
 
 **Recording does not start.** The browser needs microphone permission. Browsers only allow recording on `localhost` or HTTPS addresses, so open Handoff through `localhost`, not your computer's network address.
 
