@@ -309,9 +309,9 @@ const submitProcedure = async () => {
   isSubmitting.value = true
   message.value = ''
   submissionError.value = false
+  let knowledgeText = ''
 
   try {
-    let knowledgeText = ''
 
     // -----------------------------------------
     // Manual Entry
@@ -419,10 +419,19 @@ const submitProcedure = async () => {
     console.error(error)
 
     submissionError.value = true
-
     message.value =
       error.message ||
       'Handoff could not process the procedure.'
+
+    // The audio was transcribed, but a later step failed. Keep the
+    // transcript as editable text, so a retry skips transcription.
+    if (captureMethod.value !== 'manual' && knowledgeText) {
+      manualNotes.value = knowledgeText
+      captureMethod.value = 'manual'
+      message.value +=
+        ' Your recording was transcribed and saved below as text.' +
+        ' Review it, then try again.'
+    }
   } finally {
     isSubmitting.value = false
   }
