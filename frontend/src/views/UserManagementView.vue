@@ -42,7 +42,6 @@ const loadUsers = async () => {
 
 // Update a user's Owner or Employee role.
 const updateRole = async (user) => {
-
   // Owner access is the most powerful permission, so confirm first.
   const granting = user.role === 'owner'
 
