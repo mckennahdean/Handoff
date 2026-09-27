@@ -21,7 +21,9 @@ Handoff was built by a three-person team for UMGC CMSC 495, Computer Science Cap
 | #3 `feature/ci-cd` | First CI pipeline | Thomas Dean | Thomas Dean |
 | #4 `hotfix/embedding-model-name-regression` | Fix for a renamed embedding model | Thomas Dean | Thomas Dean |
 | #5 `q2-final-push` | Authentication, capture gaps, knowledge gaps, evaluation, Docker, CI/CD | Thomas Dean | McKenna Dean, after review |
-| #6 `q3-docs-and-polish` | Documentation, security fixes, demo data, polish | Thomas Dean | In review |
+| #6 `q3-docs-and-polish` | Documentation, security fixes, demo data, polish | Thomas Dean | Thomas Dean |
+| #7 `feature/user-management-404` | User management and custom 404 page | McKenna Dean | Thomas Dean, after review |
+| #8 `fix/user-management-followups` | Server-side role rules, tests, and user management fixes | Thomas Dean | In review |
 
 ## Thomas Dean, Lead Architect
 
@@ -34,6 +36,7 @@ Handoff was built by a three-person team for UMGC CMSC 495, Computer Science Cap
 - Built the offline evaluation harness and used it to find and fix a retrieval problem (chunked retrieval: correct retrieval from 26 of 28 to 28 of 28), set the answer threshold from measurements, and prove the need for the second abstention gate.
 - Grew the test suite with unit, integration, and route-protection tests, and built the Docker images and the CI/CD pipeline that publishes them.
 - Wrote the project documentation.
+- Reviewed pull request #7 and followed up with server-side enforcement of the role rules, tests, and fixes (PR #8).
 
 > *Decision:* I chose to measure before tuning. Building the evaluation harness turned guessed thresholds into measured ones and exposed the retrieval problem. *Lesson:* passing tests is not the same as tested code. Our CORS test and the missing route guard both passed while the bug was live.
 
@@ -44,6 +47,8 @@ Handoff was built by a three-person team for UMGC CMSC 495, Computer Science Cap
 - Established the visual design and page structure that the finished application still uses. Later work connected these screens to the backend and extended them; the interface users see today is built on her screens.
 - Documented the frontend's structure in `frontend/README.md`.
 - Reviewed and merged pull request #5, the project's largest.
+- Built user management: an owner-only page and API for listing accounts, changing roles, and deleting employee accounts (PR #7).
+- Built the custom 404 page with randomized team pet photos, removing embedded photo metadata (EXIF) before committing them.
 
 > _[One decision and why, and one lesson learned.]_
 

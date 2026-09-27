@@ -87,6 +87,15 @@ Use **Search questions** and **Show** (All, Open, Resolved, Dismissed) to filter
 
 On the dashboard's Team Access card, **Copy Code** copies the invite code to share with employees. **New Code** replaces it: the old code stops working immediately, which is useful if a code was shared by mistake. Existing accounts are not affected.
 
+### 8. Manage users
+
+On the owner dashboard, select the **User Management** tab to see everyone with access to your business.
+
+- **Role**: change a person between **Employee** and **Owner**. Handoff asks you to confirm first, because owners can approve and delete procedures, see knowledge gaps, and manage every account.
+- **Delete**: permanently remove an employee's account. They lose access on their very next action, even if Handoff is still open on their screen.
+
+You cannot change your own role, so a business always keeps at least one owner. Owner accounts cannot be deleted; change the person to Employee first.
+
 ## For employees
 
 ### Ask Handoff

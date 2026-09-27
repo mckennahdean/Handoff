@@ -279,3 +279,48 @@ def require_owner(
         )
 
     return user
+
+
+
+# ---------- User management ----------
+
+def list_users() -> list:
+    with Session(engine) as session:
+        return session.scalars(
+            select(User).order_by(User.name)
+        ).all()
+
+
+def set_user_role(user_id: int, role: str):
+    """Change a user's role. Returns the updated user,
+    or None if the user does not exist."""
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+
+        if user is None:
+            return None
+
+        user.role = role
+        session.commit()
+        session.refresh(user)
+
+        return user
+
+
+def delete_employee(user_id: int):
+    """Delete an employee account. Returns True when deleted,
+    False when the account is an owner (owners are never
+    deleted), or None if the user does not exist."""
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+
+        if user is None:
+            return None
+
+        if user.role != "employee":
+            return False
+
+        session.delete(user)
+        session.commit()
+
+        return True

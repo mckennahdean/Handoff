@@ -18,7 +18,8 @@ from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.orm import Session
 
 import backend.db_service as db_service
-from backend.models import Base, Gap, ProcedureChunk
+import backend.auth_service as auth_service
+from backend.models import Base, Gap, ProcedureChunk, User
 import backend.seed_demo as seed_demo
 
 load_dotenv()
@@ -251,3 +252,38 @@ def test_seed_demo_adds_each_procedure_once(db):
     assert first_run == 7
     assert second_run == 0
     assert len(db_service.get_procedures()) == 7
+
+def test_user_management_against_real_database(db, monkeypatch):
+    # The shared fixture points db_service at the test database;
+    # auth_service has its own engine reference, so point it too.
+    monkeypatch.setattr(auth_service, "engine", db)
+
+    with Session(db) as session:
+        owner = User(
+            name="Olive Owner",
+            email="olive@test.com",
+            password_hash="not-a-real-hash",
+            role="owner"
+        )
+        employee = User(
+            name="Eddie Employee",
+            email="eddie@test.com",
+            password_hash="not-a-real-hash",
+            role="employee"
+        )
+        session.add_all([owner, employee])
+        session.commit()
+        owner_id, employee_id = owner.id, employee.id
+
+    names = [user.name for user in auth_service.list_users()]
+    assert names == ["Eddie Employee", "Olive Owner"]
+
+    assert auth_service.set_user_role(employee_id, "owner").role == "owner"
+    assert auth_service.set_user_role(9999, "owner") is None
+
+    # Owners are never deleted.
+    assert auth_service.delete_employee(owner_id) is False
+
+    auth_service.set_user_role(employee_id, "employee")
+    assert auth_service.delete_employee(employee_id) is True
+    assert auth_service.delete_employee(employee_id) is None

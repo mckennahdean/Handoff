@@ -69,9 +69,14 @@ const goToLogin = () => {
   router.push('/login')
 }
 
-// Return to the previous page.
+// Return to the previous page, or to login if there is none
+// (for example, when a broken link was opened in a new tab).
 const goBack = () => {
-  window.history.back()
+  if (window.history.length > 1) {
+    window.history.back()
+  } else {
+    router.push('/login')
+  }
 }
 </script>
 

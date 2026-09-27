@@ -68,6 +68,9 @@ Errors return JSON with a readable `detail` message:
 | POST | `/api/gaps/{gap_id}/dismiss` | Dismiss a knowledge gap |
 | GET | `/api/business/invite-code` | The current invite code |
 | POST | `/api/business/invite-code/regenerate` | Replace the invite code |
+| GET | `/api/business/users` | List everyone with access |
+| PATCH | `/api/business/users/{user_id}/role` | Change a user's role (not your own) |
+| DELETE | `/api/business/users/{user_id}` | Delete an employee account |
 
 ## Request and response details
 
@@ -151,3 +154,15 @@ Request: `title`, `steps`, `warnings`, and the `procedure_id` of the draft or pr
 ```
 
 Approval is all or nothing: if embedding fails, nothing is saved. `resolved_gaps` counts the open knowledge gaps this procedure now answers, which are resolved automatically.
+
+### Change a role: `PATCH /api/business/users/{user_id}/role`
+
+```json
+{ "role": "owner" }
+```
+
+Returns the updated user (`id`, `name`, `email`, `role`). Returns `400` if the role is not `owner` or `employee`, or if the user is the caller: owners cannot change their own role, so the business always keeps at least one owner. Returns `404` if the user does not exist.
+
+### Delete an employee: `DELETE /api/business/users/{user_id}`
+
+Returns `{ "message": "Employee account deleted." }`. Owner accounts cannot be deleted (`400`). The deleted person's next request is rejected with `401`, because every request reloads the user from the database.

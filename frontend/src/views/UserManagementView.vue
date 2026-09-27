@@ -26,12 +26,13 @@ const loadUsers = async () => {
 
   try {
     const response = await apiFetch('/api/business/users')
+    const data = await response.json()
 
     if (!response.ok) {
-      throw new Error(await errorMessage(response))
+      throw new Error(errorMessage(data, 'Unable to load users.'))
     }
 
-    users.value = await response.json()
+    users.value = data
   } catch (err) {
     error.value = err.message || 'Unable to load users.'
   } finally {
@@ -41,37 +42,55 @@ const loadUsers = async () => {
 
 // Update a user's Owner or Employee role.
 const updateRole = async (user) => {
+  // Owner access is the most powerful permission, so confirm first.
+  const granting = user.role === 'owner'
+
+  const confirmed = window.confirm(
+    granting
+      ? `Give ${user.name} owner access? Owners can approve and delete ` +
+        'procedures, see knowledge gaps, and manage every account.'
+      : `Remove ${user.name}'s owner access? They will become an employee.`
+  )
+
+  if (!confirmed) {
+    // The dropdown already changed, so put it back.
+    user.role = granting ? 'employee' : 'owner'
+    return
+  }
+
   savingRoleId.value = user.id
   message.value = ''
   error.value = ''
 
   try {
     const response = await apiFetch(
-  `/api/business/users/${user.id}/role`,
-  {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      role: user.role
-    })
-  }
-)
+      `/api/business/users/${user.id}/role`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          role: user.role
+        })
+      }
+    )
+
+    const data = await response.json()
 
     if (!response.ok) {
-      throw new Error(await errorMessage(response))
+      throw new Error(
+        errorMessage(data, 'Unable to update the user role.')
+      )
     }
 
-    const updatedUser = await response.json()
-
-    user.role = updatedUser.role
+    user.role = data.role
     message.value = `${user.name}'s role was updated.`
   } catch (err) {
-    error.value = err.message || 'Unable to update the user role.'
-
-    // Reload the list so the displayed role matches the database.
+    // Reload first so the list matches the database. Reloading
+    // clears old messages, so set the error afterward.
     await loadUsers()
+    error.value = err.message || 'Unable to update the user role.'
   } finally {
     savingRoleId.value = null
   }
@@ -103,8 +122,12 @@ const deleteEmployee = async (user) => {
       }
     )
 
+    const data = await response.json()
+
     if (!response.ok) {
-      throw new Error(await errorMessage(response))
+      throw new Error(
+        errorMessage(data, 'Unable to delete the employee account.')
+      )
     }
 
     users.value = users.value.filter(
