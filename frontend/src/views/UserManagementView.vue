@@ -88,10 +88,10 @@ const updateRole = async (user) => {
     user.role = data.role
     message.value = `${user.name}'s role was updated.`
   } catch (err) {
-    error.value = err.message || 'Unable to update the user role.'
-
-    // Reload the list so the displayed role matches the database.
+    // Reload first so the list matches the database. Reloading
+    // clears old messages, so set the error afterward.
     await loadUsers()
+    error.value = err.message || 'Unable to update the user role.'
   } finally {
     savingRoleId.value = null
   }
