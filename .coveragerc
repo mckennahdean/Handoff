@@ -11,3 +11,7 @@ omit =
 [report]
 show_missing = True
 skip_empty = True
+# Thin command-line launchers. Their logic lives in functions
+# that the tests call directly, so only the entry point is skipped.
+exclude_also =
+    if __name__ == .__main__.:
