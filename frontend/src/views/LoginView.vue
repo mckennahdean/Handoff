@@ -57,12 +57,6 @@ const createAccount = () => {
   router.push('/signup')
 }
 
-// Handles the forgot-password action.
-// This remains a mock until backend authentication is implemented.
-const forgotPassword = () => {
-  message.value =
-    'Password recovery will be connected to the Handoff backend.'
-}
 </script>
 
 <template>
@@ -130,14 +124,6 @@ const forgotPassword = () => {
             <div class="form-group">
               <div class="password-label-row">
                 <label for="password">Password</label>
-
-                <button
-                  type="button"
-                  class="forgot-button"
-                  @click="forgotPassword"
-                >
-                  Forgot Password?
-                </button>
               </div>
 
               <div class="password-input">
@@ -455,25 +441,6 @@ const forgotPassword = () => {
 .password-label-row label {
   margin-bottom: 8px;
 }
-
-
-.forgot-button {
-  padding: 0;
-  border: none;
-  background: none;
-  color: #275b4f;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-
-.forgot-button:hover {
-  color: #d26f3d;
-  text-decoration: underline;
-}
-
 
 /* =========================================
    Password Input
