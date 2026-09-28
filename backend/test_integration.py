@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 
 import pytest
 from dotenv import load_dotenv
+from fastapi import HTTPException
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.orm import Session
 
@@ -345,3 +347,136 @@ def test_create_tables_converts_old_timestamps_without_shifting_them(db):
 
     # A second run finds nothing left to convert.
     assert create_tables(db) == []
+
+
+PASSWORD = "Correct-Horse-Battery-9"
+
+
+@pytest.fixture
+def auth_db(db, monkeypatch):
+    # auth_service has its own engine reference; point it at the
+    # test database. A fixed test secret keeps CI independent of .env.
+    monkeypatch.setattr(auth_service, "engine", db)
+    monkeypatch.setenv(
+        "JWT_SECRET_KEY",
+        "integration-test-secret-key-0123456789abcdef"
+    )
+    return db
+
+
+def test_owner_signup_stores_an_argon2_hash_never_the_password(auth_db):
+    owner = auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+
+    assert owner.role == "owner"
+    assert auth_service.count_users() == 1
+
+    stored = auth_service.get_user_by_email("olive@test.com").password_hash
+    assert stored.startswith("$argon2id$")
+    assert PASSWORD not in stored
+
+    business = auth_service.get_business()
+    assert business.name == "Test Cafe"
+    assert len(business.invite_code) == auth_service.INVITE_CODE_LENGTH
+
+
+def test_login_gives_one_answer_for_wrong_password_and_unknown_email(
+    auth_db, monkeypatch
+):
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+
+    user = auth_service.authenticate_user("olive@test.com", PASSWORD)
+    assert user.email == "olive@test.com"
+
+    # Record which hashes get checked, to prove an unknown email
+    # still pays for one real Argon2 check (the timing defense).
+    checked = []
+    real_verify = auth_service.verify_password
+    monkeypatch.setattr(
+        auth_service,
+        "verify_password",
+        lambda password, password_hash: (
+            checked.append(password_hash)
+            or real_verify(password, password_hash)
+        )
+    )
+
+    assert auth_service.authenticate_user(
+        "olive@test.com", "Wrong-Password-12"
+    ) is None
+    assert auth_service.authenticate_user(
+        "nobody@test.com", PASSWORD
+    ) is None
+
+    assert len(checked) == 2
+    assert checked[1] == auth_service.DUMMY_HASH
+
+
+def test_invite_codes_are_checked_against_the_database(auth_db):
+    # No business yet, so no code can be valid.
+    assert auth_service.invite_code_is_valid("ABCD2345") is False
+
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    code = auth_service.get_business().invite_code
+
+    assert auth_service.invite_code_is_valid(code)
+    # Typed casually, with spaces and lowercase, it still works.
+    assert auth_service.invite_code_is_valid(f"  {code.lower()} ")
+    assert auth_service.invite_code_is_valid("WRONG234") is False
+
+    employee = auth_service.create_employee_account(
+        "Eddie Employee", "eddie@test.com", PASSWORD
+    )
+    assert employee.role == "employee"
+    assert auth_service.count_users() == 2
+
+
+def test_regenerating_the_invite_code_kills_the_old_one(auth_db):
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    old_code = auth_service.get_business().invite_code
+
+    new_code = auth_service.regenerate_invite_code()
+
+    assert new_code != old_code
+    assert auth_service.invite_code_is_valid(old_code) is False
+    assert auth_service.invite_code_is_valid(new_code)
+
+
+def test_the_database_not_the_token_decides_who_you_are(auth_db):
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    employee = auth_service.create_employee_account(
+        "Eddie Employee", "eddie@test.com", PASSWORD
+    )
+
+    # A token issued while Eddie was an owner says role "owner".
+    promoted = auth_service.set_user_role(employee.id, "owner")
+    token = auth_service.create_access_token(promoted)
+    credentials = HTTPAuthorizationCredentials(
+        scheme="Bearer", credentials=token
+    )
+
+    # Demoted after the token was issued: owner access ends now.
+    auth_service.set_user_role(employee.id, "employee")
+    user = auth_service.get_current_user(credentials)
+    assert user.role == "employee"
+
+    with pytest.raises(HTTPException) as denied:
+        auth_service.require_owner(user)
+    assert denied.value.status_code == 403
+
+    # Deleted: the still-valid token no longer gets in at all.
+    assert auth_service.delete_employee(employee.id) is True
+
+    with pytest.raises(HTTPException) as refused:
+        auth_service.get_current_user(credentials)
+    assert refused.value.status_code == 401
+    assert refused.value.detail == "User no longer exists."
