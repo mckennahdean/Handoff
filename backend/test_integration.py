@@ -202,6 +202,7 @@ def test_deleting_a_procedure_reopens_gaps_and_removes_chunks(db):
     # ON DELETE CASCADE removed the chunks inside Postgres itself.
     assert count(db, ProcedureChunk) == 0
 
+
 def test_get_gaps_lists_open_first_with_variants_and_resolver_title(db):
     db_service.log_gap("Where do I record the till count?", 0.4)
     db_service.log_gap("Who counts the till at night?", 0.4)
@@ -237,6 +238,7 @@ def test_dismissing_a_gap_marks_it_dismissed(db):
     assert stored.status == "dismissed"
     assert stored.resolved_at is not None
 
+
 def test_asking_again_after_dismissal_opens_a_new_gap(db):
     gap = db_service.log_gap("How often should we descale?", 0.3)
     db_service.dismiss_gap(gap.id)
@@ -247,6 +249,7 @@ def test_asking_again_after_dismissal_opens_a_new_gap(db):
     assert again.status == "open"
     assert again.frequency_count == 1
 
+
 def test_seed_demo_adds_each_procedure_once(db):
     first_run = seed_demo.seed(pause_seconds=0)
     second_run = seed_demo.seed(pause_seconds=0)
@@ -254,6 +257,7 @@ def test_seed_demo_adds_each_procedure_once(db):
     assert first_run == 7
     assert second_run == 0
     assert len(db_service.get_procedures()) == 7
+
 
 def test_user_management_against_real_database(db, monkeypatch):
     # The shared fixture points db_service at the test database;
