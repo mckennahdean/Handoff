@@ -1,8 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { apiFetch, getCurrentUser, errorMessage } from '../api.js'
-
+import { apiFetch, getCurrentUser } from '../api.js'
 const router = useRouter()
 
 // The signed-in owner, saved at login.
@@ -13,11 +12,6 @@ const procedureCount = ref('...')
 const documentationGaps = ref('...')
 
 const pendingReviews = ref('...')
-
-// Invite code the owner shares with new employees.
-const businessName = ref('')
-const inviteCode = ref('')
-const inviteMessage = ref('')
 
 const loadStats = async () => {
   try {
@@ -51,66 +45,8 @@ const loadStats = async () => {
   }
 }
 
-const loadInviteCode = async () => {
-  try {
-    const response = await apiFetch('/api/business/invite-code')
-    const data = await response.json()
-
-    if (!response.ok) {
-      inviteMessage.value = errorMessage(data, 'Unable to load invite code.')
-      return
-    }
-
-    businessName.value = data.business_name
-    inviteCode.value = data.invite_code
-  } catch {
-    inviteMessage.value = 'Unable to reach the Handoff server.'
-  }
-}
-
-const copyInviteCode = async () => {
-  try {
-    await navigator.clipboard.writeText(inviteCode.value)
-    inviteMessage.value = 'Invite code copied.'
-  } catch {
-    inviteMessage.value = 'Copy failed. Please copy the code manually.'
-  }
-}
-
-const regenerateInviteCode = async () => {
-  const confirmed = window.confirm(
-    'Create a new invite code? The current code will stop working ' +
-    'immediately. Existing employee accounts are not affected.'
-  )
-
-  if (!confirmed) {
-    return
-  }
-
-  try {
-    const response = await apiFetch(
-      '/api/business/invite-code/regenerate',
-      { method: 'POST' }
-    )
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      inviteMessage.value = errorMessage(data, 'Unable to create a new code.')
-      return
-    }
-
-    inviteCode.value = data.invite_code
-    inviteMessage.value =
-      'New invite code created. The old code no longer works.'
-  } catch {
-    inviteMessage.value = 'Unable to reach the Handoff server.'
-  }
-}
-
 onMounted(() => {
   loadStats()
-  loadInviteCode()
 })
 
 // Navigate to a specific Handoff feature.
@@ -200,48 +136,6 @@ const goTo = (path) => {
           Questions that need documentation
         </span>
       </button>
-
-    </section>
-
-    <!-- Team access: invite code for new employees -->
-    <section class="section">
-
-      <div class="section-heading">
-        <h2>Team Access</h2>
-
-        <p>
-          Share this code with new employees so they can create
-          their {{ businessName || 'Handoff' }} account.
-        </p>
-      </div>
-
-      <div class="invite-card">
-        <span class="invite-code">
-          {{ inviteCode || '........' }}
-        </span>
-
-        <div class="invite-actions">
-          <button
-            type="button"
-            class="invite-button"
-            @click="copyInviteCode"
-          >
-            Copy Code
-          </button>
-
-          <button
-            type="button"
-            class="invite-button secondary"
-            @click="regenerateInviteCode"
-          >
-            New Code
-          </button>
-        </div>
-      </div>
-
-      <p v-if="inviteMessage" class="invite-message">
-        {{ inviteMessage }}
-      </p>
 
     </section>
 
@@ -576,69 +470,6 @@ const goTo = (path) => {
   color: #777777;
   font-size: 14px;
   line-height: 1.55;
-}
-
-/* =========================================
-   Team Access / Invite Code
-   ========================================= */
-
-.invite-card {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 22px 24px;
-  border: 1px solid #d8d2c8;
-  border-radius: 14px;
-  background: #ffffff;
-}
-
-
-.invite-code {
-  color: #275b4f;
-  font-family: 'Courier New', monospace;
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: 6px;
-}
-
-
-.invite-actions {
-  display: flex;
-  gap: 10px;
-}
-
-
-.invite-button {
-  padding: 11px 18px;
-  border: none;
-  border-radius: 8px;
-  background: #275b4f;
-  color: #ffffff;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-
-.invite-button.secondary {
-  border: 1px solid #d26f3d;
-  background: #ffffff;
-  color: #d26f3d;
-}
-
-
-.invite-button:hover {
-  opacity: 0.9;
-}
-
-
-.invite-message {
-  margin: 12px 0 0;
-  color: #275b4f;
-  font-size: 13px;
 }
 
 /* =========================================
