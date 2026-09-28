@@ -11,6 +11,7 @@ skip themselves when TEST_DATABASE_URL is not set.
 """
 import json
 import os
+from datetime import datetime, timezone
 
 import pytest
 from dotenv import load_dotenv
@@ -21,6 +22,7 @@ import backend.db_service as db_service
 import backend.auth_service as auth_service
 from backend.models import Base, Gap, ProcedureChunk, User
 import backend.seed_demo as seed_demo
+from backend.create_tables import create_tables
 
 load_dotenv()
 
@@ -287,3 +289,55 @@ def test_user_management_against_real_database(db, monkeypatch):
     auth_service.set_user_role(employee_id, "employee")
     assert auth_service.delete_employee(employee_id) is True
     assert auth_service.delete_employee(employee_id) is None
+
+
+def column_types(engine):
+    """Every column's type and nullability, for before/after checks."""
+    with engine.connect() as connection:
+        return connection.execute(text(
+            "SELECT table_name, column_name, data_type, is_nullable "
+            "FROM information_schema.columns "
+            "WHERE table_schema = 'public' "
+            "ORDER BY table_name, column_name"
+        )).all()
+
+
+def test_create_tables_is_safe_to_run_repeatedly(db):
+    create_tables(db)
+    before = column_types(db)
+
+    assert create_tables(db) == []
+    assert column_types(db) == before
+
+
+def test_create_tables_converts_old_timestamps_without_shifting_them(db):
+    # Recreate the pre-migration schema: a naive timestamp column
+    # holding a UTC wall-clock value.
+    with db.connect() as connection:
+        connection.execute(text(
+            "ALTER TABLE business ALTER COLUMN created_at "
+            "TYPE TIMESTAMP WITHOUT TIME ZONE"
+        ))
+        connection.execute(text(
+            "INSERT INTO business (name, invite_code, created_at) "
+            "VALUES ('Test Cafe', 'TESTCODE', '2026-09-25 12:00:00')"
+        ))
+        connection.commit()
+
+    assert create_tables(db) == ["business.created_at"]
+
+    with db.connect() as connection:
+        data_type = connection.execute(text(
+            "SELECT data_type FROM information_schema.columns "
+            "WHERE table_name = 'business' "
+            "AND column_name = 'created_at'"
+        )).scalar()
+        created_at = connection.execute(text(
+            "SELECT created_at FROM business"
+        )).scalar()
+
+    assert data_type == "timestamp with time zone"
+    assert created_at == datetime(2026, 9, 25, 12, 0, tzinfo=timezone.utc)
+
+    # A second run finds nothing left to convert.
+    assert create_tables(db) == []
