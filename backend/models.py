@@ -184,6 +184,13 @@ class User(Base):
         nullable=True
     )
 
+    # "active" accounts can sign in; "pending" ones wait for owner approval.
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="active",
+        server_default="active"
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc)
@@ -196,11 +203,6 @@ class Business(Base):
 
     name: Mapped[str] = mapped_column(
         String(200)
-    )
-
-    invite_code: Mapped[str] = mapped_column(
-        String(20),
-        unique=True
     )
 
     created_at: Mapped[datetime] = mapped_column(

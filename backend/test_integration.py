@@ -325,8 +325,8 @@ def test_create_tables_converts_old_timestamps_without_shifting_them(db):
             "TYPE TIMESTAMP WITHOUT TIME ZONE"
         ))
         connection.execute(text(
-            "INSERT INTO business (name, invite_code, created_at) "
-            "VALUES ('Test Cafe', 'TESTCODE', '2026-09-25 12:00:00')"
+            "INSERT INTO business (name, created_at) "
+            "VALUES ('Test Cafe', '2026-09-25 12:00:00')"
         ))
         connection.commit()
 
@@ -378,7 +378,7 @@ def test_owner_signup_stores_an_argon2_hash_never_the_password(auth_db):
 
     business = auth_service.get_business()
     assert business.name == "Test Cafe"
-    assert len(business.invite_code) == auth_service.INVITE_CODE_LENGTH
+    assert owner.status == "active"
 
 
 def test_login_gives_one_answer_for_wrong_password_and_unknown_email(
@@ -415,40 +415,6 @@ def test_login_gives_one_answer_for_wrong_password_and_unknown_email(
     assert checked[1] == auth_service.DUMMY_HASH
 
 
-def test_invite_codes_are_checked_against_the_database(auth_db):
-    # No business yet, so no code can be valid.
-    assert auth_service.invite_code_is_valid("ABCD2345") is False
-
-    auth_service.create_owner_account(
-        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
-    )
-    code = auth_service.get_business().invite_code
-
-    assert auth_service.invite_code_is_valid(code)
-    # Typed casually, with spaces and lowercase, it still works.
-    assert auth_service.invite_code_is_valid(f"  {code.lower()} ")
-    assert auth_service.invite_code_is_valid("WRONG234") is False
-
-    employee = auth_service.create_employee_account(
-        "Eddie Employee", "eddie@test.com", PASSWORD
-    )
-    assert employee.role == "employee"
-    assert auth_service.count_users() == 2
-
-
-def test_regenerating_the_invite_code_kills_the_old_one(auth_db):
-    auth_service.create_owner_account(
-        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
-    )
-    old_code = auth_service.get_business().invite_code
-
-    new_code = auth_service.regenerate_invite_code()
-
-    assert new_code != old_code
-    assert auth_service.invite_code_is_valid(old_code) is False
-    assert auth_service.invite_code_is_valid(new_code)
-
-
 def test_the_database_not_the_token_decides_who_you_are(auth_db):
     auth_service.create_owner_account(
         "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
@@ -456,6 +422,7 @@ def test_the_database_not_the_token_decides_who_you_are(auth_db):
     employee = auth_service.create_employee_account(
         "Eddie Employee", "eddie@test.com", PASSWORD
     )
+    auth_service.approve_user(employee.id)
 
     # A token issued while Eddie was an owner says role "owner".
     promoted = auth_service.set_user_role(employee.id, "owner")
@@ -531,3 +498,41 @@ def test_a_successful_login_resets_the_failure_count(auth_db):
     assert auth_service.authenticate_user(
         "olive@test.com", PASSWORD
     ) is not None
+
+
+def test_employee_accounts_wait_for_owner_approval(auth_db):
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    employee = auth_service.create_employee_account(
+        "Eddie Employee", "eddie@test.com", PASSWORD
+    )
+
+    assert employee.status == "pending"
+    assert auth_service.count_pending_users() == 1
+
+    approved = auth_service.approve_user(employee.id)
+
+    assert approved.status == "active"
+    assert auth_service.count_pending_users() == 0
+    assert auth_service.approve_user(9999) is None
+
+
+def test_a_token_for_a_pending_account_is_refused(auth_db):
+    # Pending accounts never receive a token; if one existed anyway,
+    # the server would still refuse it (defense in depth).
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    employee = auth_service.create_employee_account(
+        "Eddie Employee", "eddie@test.com", PASSWORD
+    )
+    credentials = HTTPAuthorizationCredentials(
+        scheme="Bearer",
+        credentials=auth_service.create_access_token(employee)
+    )
+
+    with pytest.raises(HTTPException) as refused:
+        auth_service.get_current_user(credentials)
+
+    assert refused.value.status_code == 403

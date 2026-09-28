@@ -1,5 +1,4 @@
 import os
-import secrets
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -18,14 +17,15 @@ load_dotenv()
 
 ALGORITHM = "HS256"
 TOKEN_LIFETIME_HOURS = 8
-INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-INVITE_CODE_LENGTH = 8
 
 # Login throttling. NIST SP 800-63B requires limiting failed
 # attempts; a temporary lock (not a permanent one) stops password
 # guessing without letting an attacker lock someone out for good.
 MAX_FAILED_LOGINS = 5
 LOCKOUT_MINUTES = 15
+
+# Signups wait for owner approval; cap the queue so it cannot be flooded.
+MAX_PENDING_ACCOUNTS = 20
 
 password_hasher = PasswordHash.recommended()
 
@@ -120,14 +120,7 @@ def decode_access_token(token: str) -> dict:
     )
 
 
-# ---------- Invite codes ----------
-
-def generate_invite_code() -> str:
-    return "".join(
-        secrets.choice(INVITE_CODE_ALPHABET)
-        for _ in range(INVITE_CODE_LENGTH)
-    )
-
+# ---------- Business ----------
 
 def get_business():
     with Session(engine) as session:
@@ -136,36 +129,21 @@ def get_business():
         )
 
 
-def invite_code_is_valid(code: str) -> bool:
-    business = get_business()
-
-    if business is None:
-        return False
-
-    return secrets.compare_digest(
-        business.invite_code.encode(),
-        code.strip().upper().encode()
-    )
-
-
-def regenerate_invite_code() -> str:
-    with Session(engine) as session:
-        business = session.scalar(
-            select(Business).limit(1)
-        )
-
-        business.invite_code = generate_invite_code()
-        session.commit()
-
-        return business.invite_code
-
-
 # ---------- Users ----------
 
 def count_users() -> int:
     with Session(engine) as session:
         return session.scalar(
             select(func.count()).select_from(User)
+        )
+
+
+def count_pending_users() -> int:
+    with Session(engine) as session:
+        return session.scalar(
+            select(func.count())
+            .select_from(User)
+            .where(User.status == "pending")
         )
 
 
@@ -224,8 +202,7 @@ def create_owner_account(
 ):
     with Session(engine) as session:
         business = Business(
-            name=business_name,
-            invite_code=generate_invite_code()
+            name=business_name
         )
 
         user = User(
@@ -252,7 +229,8 @@ def create_employee_account(
             name=name,
             email=email,
             password_hash=hash_password(password),
-            role="employee"
+            role="employee",
+            status="pending"
         )
 
         session.add(user)
@@ -299,6 +277,14 @@ def get_current_user(
             detail="User no longer exists."
         )
 
+    # Defense in depth: pending accounts never receive a token,
+    # but if one somehow had a token, it still would not work.
+    if user.status != "active":
+        raise HTTPException(
+            status_code=403,
+            detail="Your account is waiting for owner approval."
+        )
+
     return user
 
 
@@ -322,6 +308,22 @@ def list_users() -> list:
         return session.scalars(
             select(User).order_by(User.name)
         ).all()
+
+
+def approve_user(user_id: int):
+    """Activate a pending account. Returns the user,
+    or None if the user does not exist."""
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+
+        if user is None:
+            return None
+
+        user.status = "active"
+        session.commit()
+        session.refresh(user)
+
+        return user
 
 
 def set_user_role(user_id: int, role: str):
