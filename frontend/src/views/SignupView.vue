@@ -9,14 +9,13 @@ const router = useRouter()
 // Stores the values entered into the sign-up form.
 const name = ref('')
 const business = ref('')
-const inviteCode = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 
 // True only when no accounts exist yet. The first account
 // becomes the Owner and names the business. Everyone after
-// that joins as an Employee using the Owner's invite code.
+// that joins as a pending Employee until an Owner approves them.
 const needsOwner = ref(false)
 
 // Controls whether the password fields are visible.
@@ -80,8 +79,6 @@ const createAccount = async () => {
 
   if (needsOwner.value) {
     body.business_name = business.value
-  } else {
-    body.invite_code = inviteCode.value
   }
 
   try {
@@ -100,6 +97,13 @@ const createAccount = async () => {
         data,
         'Unable to create account. Please check the form.'
       )
+      return
+    }
+
+    // Employees wait for an Owner's approval, so there is no
+    // login token yet. The login page explains what happens next.
+    if (data.status === 'pending') {
+      router.push({ path: '/login', query: { pending: '1' } })
       return
     }
 
@@ -193,20 +197,6 @@ const goToLogin = () => {
                 v-model="business"
                 type="text"
                 placeholder="Your business or organization"
-                required
-              />
-            </div>
-
-            <!-- Invite code: every account after the Owner -->
-            <div v-else class="form-group">
-              <label for="invite-code">Invite Code</label>
-
-              <input
-                id="invite-code"
-                v-model="inviteCode"
-                type="text"
-                placeholder="8-character code from your manager"
-                maxlength="8"
                 required
               />
             </div>

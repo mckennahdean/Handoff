@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiFetch, getCurrentUser, errorMessage } from '../api.js'
 
@@ -11,13 +11,18 @@ const message = ref('')
 const error = ref('')
 const savingRoleId = ref(null)
 const deletingUserId = ref(null)
-
-// Invite code the owner shares with new employees.
-const businessName = ref('')
-const inviteCode = ref('')
-const inviteMessage = ref('')
+const approvingUserId = ref(null)
 
 const currentUser = getCurrentUser()
+
+// New signups wait here until an owner approves or rejects them.
+const pendingUsers = computed(() =>
+  users.value.filter((user) => user.status === 'pending')
+)
+
+const activeUsers = computed(() =>
+  users.value.filter((user) => user.status !== 'pending')
+)
 
 // Return to the Owner Dashboard.
 const goToDashboard = () => {
@@ -101,15 +106,46 @@ const updateRole = async (user) => {
   }
 }
 
-// Delete an employee account.
-const deleteEmployee = async (user) => {
+// Let a pending account sign in.
+const approveUser = async (user) => {
+  approvingUserId.value = user.id
+  message.value = ''
+  error.value = ''
+
+  try {
+    const response = await apiFetch(
+      `/api/business/users/${user.id}/approve`,
+      { method: 'POST' }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(
+        errorMessage(data, 'Unable to approve the account.')
+      )
+    }
+
+    user.status = data.status
+    message.value = `${user.name} can now sign in.`
+  } catch (err) {
+    // Reload first so the list matches the database. Reloading
+    // clears old messages, so set the error afterward.
+    await loadUsers()
+    error.value = err.message || 'Unable to approve the account.'
+  } finally {
+    approvingUserId.value = null
+  }
+}
+
+// Delete an employee account, or reject a pending signup.
+// Both remove the account, so they share one request.
+const removeAccount = async (user, question, doneMessage) => {
   if (user.role !== 'employee') {
     return
   }
 
-  const confirmed = window.confirm(
-    `Delete ${user.name}'s employee account? This cannot be undone.`
-  )
+  const confirmed = window.confirm(question)
 
   if (!confirmed) {
     return
@@ -131,7 +167,7 @@ const deleteEmployee = async (user) => {
 
     if (!response.ok) {
       throw new Error(
-        errorMessage(data, 'Unable to delete the employee account.')
+        errorMessage(data, 'Unable to remove the account.')
       )
     }
 
@@ -139,76 +175,27 @@ const deleteEmployee = async (user) => {
       (existingUser) => existingUser.id !== user.id
     )
 
-    message.value = `${user.name}'s account was deleted.`
+    message.value = doneMessage
   } catch (err) {
-    error.value = err.message || 'Unable to delete the employee account.'
+    error.value = err.message || 'Unable to remove the account.'
   } finally {
     deletingUserId.value = null
   }
 }
 
-const loadInviteCode = async () => {
-  try {
-    const response = await apiFetch('/api/business/invite-code')
-    const data = await response.json()
+const deleteEmployee = (user) => removeAccount(
+  user,
+  `Delete ${user.name}'s employee account? This cannot be undone.`,
+  `${user.name}'s account was deleted.`
+)
 
-    if (!response.ok) {
-      inviteMessage.value = errorMessage(data, 'Unable to load invite code.')
-      return
-    }
+const rejectUser = (user) => removeAccount(
+  user,
+  `Reject ${user.name}'s request? Their pending account will be deleted.`,
+  `${user.name}'s request was rejected.`
+)
 
-    businessName.value = data.business_name
-    inviteCode.value = data.invite_code
-  } catch {
-    inviteMessage.value = 'Unable to reach the Handoff server.'
-  }
-}
-
-const copyInviteCode = async () => {
-  try {
-    await navigator.clipboard.writeText(inviteCode.value)
-    inviteMessage.value = 'Invite code copied.'
-  } catch {
-    inviteMessage.value = 'Copy failed. Please copy the code manually.'
-  }
-}
-
-const regenerateInviteCode = async () => {
-  const confirmed = window.confirm(
-    'Create a new invite code? The current code will stop working ' +
-    'immediately. Existing employee accounts are not affected.'
-  )
-
-  if (!confirmed) {
-    return
-  }
-
-  try {
-    const response = await apiFetch(
-      '/api/business/invite-code/regenerate',
-      { method: 'POST' }
-    )
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      inviteMessage.value = errorMessage(data, 'Unable to create a new code.')
-      return
-    }
-
-    inviteCode.value = data.invite_code
-    inviteMessage.value =
-      'New invite code created. The old code no longer works.'
-  } catch {
-    inviteMessage.value = 'Unable to reach the Handoff server.'
-  }
-}
-
-onMounted(() => {
-  loadUsers()
-  loadInviteCode()
-})
-
+onMounted(loadUsers)
 </script>
 
 <template>
@@ -218,7 +205,7 @@ onMounted(() => {
         <p class="eyebrow">USER MANAGEMENT</p>
         <h1>Manage Users</h1>
         <p class="intro">
-          Invite new employees, and manage your team's accounts and roles.
+          Approve new employees, and manage your team's accounts and roles.
         </p>
       </div>
 
@@ -231,56 +218,8 @@ onMounted(() => {
       </button>
     </section>
 
-    <!-- Team access: invite code for new employees -->
-    <section class="content-card team-access">
-      <div class="section-heading">
-        <h2>Team Access</h2>
-
-        <p>
-          Share this code with new employees so they can create
-          their {{ businessName || 'Handoff' }} account.
-        </p>
-      </div>
-
-      <div class="invite-card">
-        <span class="invite-code">
-          {{ inviteCode || '........' }}
-        </span>
-
-        <div class="invite-actions">
-          <button
-            type="button"
-            class="invite-button"
-            @click="copyInviteCode"
-          >
-            Copy Code
-          </button>
-
-          <button
-            type="button"
-            class="invite-button secondary"
-            @click="regenerateInviteCode"
-          >
-            New Code
-          </button>
-        </div>
-      </div>
-
-      <p v-if="inviteMessage" class="invite-message">
-        {{ inviteMessage }}
-      </p>
-    </section>
-
-    <section class="content-card">
-      <div class="section-heading">
-        <div>
-          <h2>Users</h2>
-          <p>
-            Owners can change user roles or remove employee accounts.
-          </p>
-        </div>
-      </div>
-
+    <!-- Success and error messages for every action on this page -->
+    <div class="page-messages">
       <p
         v-if="message"
         class="success-message"
@@ -294,13 +233,86 @@ onMounted(() => {
       >
         {{ error }}
       </p>
+    </div>
+
+    <!-- New signups waiting for an owner's decision -->
+    <section class="content-card pending-requests">
+      <div class="section-heading">
+        <h2>Waiting for Approval</h2>
+
+        <p>
+          New employees sign up on their own. They cannot see or do
+          anything until an owner approves them.
+        </p>
+      </div>
+
+      <div v-if="loading" class="empty-state">
+        Loading requests...
+      </div>
+
+      <div
+        v-else-if="pendingUsers.length === 0"
+        class="empty-state"
+      >
+        No one is waiting for approval.
+      </div>
+
+      <div v-else class="user-list">
+        <div class="user-row user-header">
+          <span>Name</span>
+          <span>Email</span>
+          <span>Actions</span>
+          <span></span>
+        </div>
+
+        <div
+          v-for="user in pendingUsers"
+          :key="user.id"
+          class="user-row"
+        >
+          <div>
+            <strong>{{ user.name }}</strong>
+          </div>
+
+          <span>{{ user.email }}</span>
+
+          <button
+            class="approve-button"
+            type="button"
+            :disabled="approvingUserId === user.id"
+            @click="approveUser(user)"
+          >
+            {{ approvingUserId === user.id ? 'Approving...' : 'Approve' }}
+          </button>
+
+          <button
+            class="danger-button"
+            type="button"
+            :disabled="deletingUserId === user.id"
+            @click="rejectUser(user)"
+          >
+            {{ deletingUserId === user.id ? 'Rejecting...' : 'Reject' }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-card">
+      <div class="section-heading">
+        <div>
+          <h2>Users</h2>
+          <p>
+            Owners can change user roles or remove employee accounts.
+          </p>
+        </div>
+      </div>
 
       <div v-if="loading" class="empty-state">
         Loading users...
       </div>
 
       <div
-        v-else-if="users.length === 0"
+        v-else-if="activeUsers.length === 0"
         class="empty-state"
       >
         No users were found.
@@ -315,7 +327,7 @@ onMounted(() => {
         </div>
 
         <div
-          v-for="user in users"
+          v-for="user in activeUsers"
           :key="user.id"
           class="user-row"
         >
@@ -611,64 +623,37 @@ onMounted(() => {
 }
 
 /* =========================================
-   Team Access / Invite Code
+   Messages and Pending Requests
    ========================================= */
 
-.team-access {
+.page-messages {
+  max-width: 1150px;
+  margin: 0 auto;
+}
+
+.pending-requests {
   margin-bottom: 24px;
 }
 
-.invite-card {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 22px 24px;
-  border: 1px solid #d8d2c8;
-  border-radius: 14px;
-  background: #ffffff;
-}
-
-.invite-code {
-  color: #275b4f;
-  font-family: 'Courier New', monospace;
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: 6px;
-}
-
-.invite-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.invite-button {
-  padding: 11px 18px;
+.approve-button {
+  padding: 9px 14px;
   border: none;
-  border-radius: 8px;
+  border-radius: 7px;
   background: #275b4f;
   color: #ffffff;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
 
-.invite-button.secondary {
-  border: 1px solid #d26f3d;
-  background: #ffffff;
-  color: #d26f3d;
-}
-
-.invite-button:hover {
+.approve-button:hover {
   opacity: 0.9;
 }
 
-.invite-message {
-  margin: 12px 0 0;
-  color: #275b4f;
-  font-size: 13px;
+.approve-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* =========================================

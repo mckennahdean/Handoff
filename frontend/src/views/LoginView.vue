@@ -1,10 +1,11 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { apiFetch, saveSession, errorMessage } from '../api.js'
 
 // Allows navigation between pages.
 const router = useRouter()
+const route = useRoute()
 
 // Stores the values entered into the login form.
 const email = ref('')
@@ -13,8 +14,14 @@ const password = ref('')
 // Controls whether the password is visible.
 const showPassword = ref(false)
 
-// Displays a message after the user takes an action.
-const message = ref('')
+// Displays a message after the user takes an action. After an
+// employee signs up, it starts by explaining the approval step.
+const message = ref(
+  route.query.pending
+    ? 'Account created. Your business owner needs to approve it ' +
+      'before you can sign in.'
+    : ''
+)
 
 // Signs the user in through the Handoff backend.
 const signIn = async () => {
@@ -56,7 +63,6 @@ const signIn = async () => {
 const createAccount = () => {
   router.push('/signup')
 }
-
 </script>
 
 <template>
