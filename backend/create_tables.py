@@ -14,16 +14,25 @@ TIMESTAMP_COLUMNS = [
     ("business", "created_at"),
 ]
 
-if __name__ == "__main__":
-    with engine.connect() as conn:
+
+def create_tables(db_engine=engine):
+    """Create missing tables and apply small schema updates.
+
+    Safe to run on every startup: each step is a no-op when the
+    database is already current. Returns the columns converted to
+    TIMESTAMPTZ on this run (empty once they are converted).
+    """
+    converted = []
+
+    with db_engine.connect() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
         conn.commit()
 
-    Base.metadata.create_all(engine)
+    Base.metadata.create_all(db_engine)
 
     # Lightweight migrations for databases created before these
     # columns changed. Each statement is safe to run repeatedly.
-    with engine.connect() as conn:
+    with db_engine.connect() as conn:
         conn.execute(text(
             "ALTER TABLE procedures "
             "ALTER COLUMN embedding DROP NOT NULL;"
@@ -42,7 +51,7 @@ if __name__ == "__main__":
             "ALTER TABLE gaps ADD COLUMN IF NOT EXISTS last_asked_at TIMESTAMPTZ;",
             "ALTER TABLE gaps ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;",
             "ALTER TABLE gaps ADD COLUMN IF NOT EXISTS resolved_by_procedure_id INTEGER;",
-            "ALTER TABLE gaps ADD COLUMN IF NOT EXISTS variants TEXT;",            
+            "ALTER TABLE gaps ADD COLUMN IF NOT EXISTS variants TEXT;",
         ]:
             conn.execute(text(statement))
 
@@ -63,8 +72,14 @@ if __name__ == "__main__":
                     f"ALTER TABLE {table} ALTER COLUMN {column} "
                     f"TYPE TIMESTAMPTZ USING {column} AT TIME ZONE 'UTC';"
                 ))
+                converted.append(f"{table}.{column}")
                 print(f"Converted {table}.{column} to TIMESTAMPTZ")
 
         conn.commit()
 
+    return converted
+
+
+if __name__ == "__main__":
+    create_tables()
     print("Database tables created.")
