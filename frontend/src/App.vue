@@ -7,8 +7,8 @@ const route = useRoute()
 </script>
 
 <template>
-  <!-- Shared navigation appears on all Handoff pages except the login screen -->
-  <NavigationBar v-if="route.name !== 'login'" />
+  <!-- Shared navigation appears on all Handoff pages except login and signup -->
+  <NavigationBar v-if="!['login', 'signup'].includes(route.name)" />
 
   <!-- Displays the page selected by Vue Router -->
   <RouterView />
