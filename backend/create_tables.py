@@ -52,6 +52,8 @@ def create_tables(db_engine=engine):
             "ALTER TABLE gaps ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;",
             "ALTER TABLE gaps ADD COLUMN IF NOT EXISTS resolved_by_procedure_id INTEGER;",
             "ALTER TABLE gaps ADD COLUMN IF NOT EXISTS variants TEXT;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ;",
         ]:
             conn.execute(text(statement))
 

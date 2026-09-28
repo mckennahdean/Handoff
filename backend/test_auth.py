@@ -203,7 +203,7 @@ def test_login_with_bad_credentials_returns_401(monkeypatch):
     )
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Invalid email or password."
+    assert response.json()["detail"].startswith("Invalid email or password.")
 
 
 def test_invite_code_format():

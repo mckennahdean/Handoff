@@ -11,7 +11,7 @@ skip themselves when TEST_DATABASE_URL is not set.
 """
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from dotenv import load_dotenv
@@ -480,3 +480,54 @@ def test_the_database_not_the_token_decides_who_you_are(auth_db):
         auth_service.get_current_user(credentials)
     assert refused.value.status_code == 401
     assert refused.value.detail == "User no longer exists."
+
+
+def test_five_failed_logins_pause_sign_in_for_fifteen_minutes(auth_db):
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+
+    for _ in range(auth_service.MAX_FAILED_LOGINS):
+        assert auth_service.authenticate_user(
+            "olive@test.com", "Wrong-Password-12"
+        ) is None
+
+    # Locked: even the correct password is refused.
+    assert auth_service.authenticate_user(
+        "olive@test.com", PASSWORD
+    ) is None
+
+    # Simulate the fifteen minutes passing.
+    with Session(auth_db) as session:
+        user = session.scalar(
+            select(User).where(User.email == "olive@test.com")
+        )
+        assert user.locked_until > datetime.now(timezone.utc)
+        user.locked_until = datetime.now(timezone.utc) - timedelta(seconds=1)
+        session.commit()
+
+    user = auth_service.authenticate_user("olive@test.com", PASSWORD)
+    assert user is not None
+    assert user.failed_login_attempts == 0
+    assert user.locked_until is None
+
+
+def test_a_successful_login_resets_the_failure_count(auth_db):
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+
+    for _ in range(auth_service.MAX_FAILED_LOGINS - 1):
+        auth_service.authenticate_user("olive@test.com", "Wrong-Password-12")
+
+    assert auth_service.authenticate_user(
+        "olive@test.com", PASSWORD
+    ) is not None
+
+    for _ in range(auth_service.MAX_FAILED_LOGINS - 1):
+        auth_service.authenticate_user("olive@test.com", "Wrong-Password-12")
+
+    # Eight failures in total, but never five in a row: not locked.
+    assert auth_service.authenticate_user(
+        "olive@test.com", PASSWORD
+    ) is not None

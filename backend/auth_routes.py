@@ -162,7 +162,10 @@ def login(request: LoginRequest):
     if user is None:
         raise HTTPException(
             status_code=401,
-            detail="Invalid email or password."
+            detail=(
+                "Invalid email or password. After 5 failed attempts, "
+                "sign-in is paused for 15 minutes."
+            )
         )
 
     return auth_response(user)

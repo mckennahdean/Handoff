@@ -21,6 +21,12 @@ TOKEN_LIFETIME_HOURS = 8
 INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 INVITE_CODE_LENGTH = 8
 
+# Login throttling. NIST SP 800-63B requires limiting failed
+# attempts; a temporary lock (not a permanent one) stops password
+# guessing without letting an attacker lock someone out for good.
+MAX_FAILED_LOGINS = 5
+LOCKOUT_MINUTES = 15
+
 password_hasher = PasswordHash.recommended()
 
 # Checked against when an email does not exist, so a failed login
@@ -171,16 +177,43 @@ def get_user_by_email(email: str):
 
 
 def authenticate_user(email: str, password: str):
-    user = get_user_by_email(email)
+    with Session(engine) as session:
+        # FOR UPDATE locks this user's row until commit, so two
+        # simultaneous attempts cannot both miss a failure.
+        user = session.scalar(
+            select(User).where(User.email == email).with_for_update()
+        )
 
-    if user is None:
-        verify_password(password, DUMMY_HASH)
-        return None
+        if user is None:
+            verify_password(password, DUMMY_HASH)
+            return None
 
-    if not verify_password(password, user.password_hash):
-        return None
+        now = datetime.now(timezone.utc)
 
-    return user
+        if user.locked_until is not None and user.locked_until > now:
+            # Same work as a normal attempt, so response timing
+            # does not reveal that the account is locked.
+            verify_password(password, DUMMY_HASH)
+            return None
+
+        if not verify_password(password, user.password_hash):
+            user.failed_login_attempts += 1
+
+            if user.failed_login_attempts >= MAX_FAILED_LOGINS:
+                user.locked_until = now + timedelta(
+                    minutes=LOCKOUT_MINUTES
+                )
+                user.failed_login_attempts = 0
+
+            session.commit()
+            return None
+
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        session.commit()
+        session.refresh(user)
+
+        return user
 
 
 def create_owner_account(
