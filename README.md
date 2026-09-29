@@ -4,7 +4,7 @@ AI knowledge capture and grounded Q&A for small businesses.
 
 An owner explains a procedure out loud. Handoff transcribes it, structures it into steps and warnings, and asks about anything the owner skipped. Nothing reaches employees until the owner approves it. Employees then ask questions in their own words and get an answer with a citation, or an honest "not documented" that becomes a knowledge gap for the owner to fill.
 
-<!-- screenshot: answered question with citation and last-confirmed date -->
+![Ask Handoff answering "How often should we descale the espresso machine?" with a citation to the approved Descaling the Espresso Machine procedure and its last-confirmed date](docs/images/27-descale-answered.png)
 
 ## Why Handoff
 

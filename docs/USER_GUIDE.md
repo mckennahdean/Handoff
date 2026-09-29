@@ -25,7 +25,7 @@ Passwords need at least 12 characters, with uppercase and lowercase letters, a n
 
 The dashboard shows three counts: **Procedures** (approved and searchable), **Pending Reviews** (drafts waiting for your approval), and **Knowledge Gaps** (open questions employees asked that Handoff could not answer). Below them are shortcuts to Capture a Procedure, Review Procedures, Knowledge Gaps, and Ask Handoff.
 
-<!-- screenshot: owner dashboard -->
+![Owner Dashboard showing counts for procedures, pending reviews, and knowledge gaps, with shortcuts below](images/10-owner-dashboard.png)
 
 ### 1. Capture a procedure
 
@@ -51,7 +51,7 @@ The draft opens on the Procedure Review page. Nothing you capture is visible to 
 
 **Handoff can add steps, but it can never change yours.** When it incorporates your answers, Handoff checks that every one of your original steps comes back word for word and in order. If the AI rewrote anything, the merge is cancelled and your procedure is left untouched.
 
-<!-- screenshot: capture gap questions with Incorporate with AI -->
+![Handoff Noticed Possible Gaps: five questions about a new descaling procedure, each with an answer box and Not Applicable, above Incorporate with AI and I'll Add It Myself](images/24-capture-gaps.png)
 
 ### 3. Approve
 
@@ -61,7 +61,9 @@ The draft opens on the Procedure Review page. Nothing you capture is visible to 
 
 Open it from the Procedures page with **Review**. The approve button reads **No Changes to Approve** until you edit something, then **Approve Changes (v2)** (or the next version number). Approving an update raises the version and updates the procedure's Last Confirmed date, which employees see with every answer.
 
-<!-- screenshot: No Changes to Approve and Approve Changes side by side -->
+![Review page for an approved procedure with no edits: the approve button reads No Changes to Approve](images/15-no-changes-to-approve.png)
+
+![The same page after editing a step: the button reads Approve Changes (v4)](images/16-approve-changes-v4.png)
 
 ### 5. Delete a procedure
 
@@ -87,7 +89,7 @@ A gap is:
 
 Use **Search questions** and **Show** (All, Open, Resolved, Dismissed) to filter the list. Search matches each gap's main question.
 
-<!-- screenshot: knowledge gap with Asked N times and Also Asked As -->
+![Knowledge gap detail: the employee question, two other wordings under Also Asked As, Open status, a 72.2% closest match, and asked 6 times](images/23-gap-also-asked-as.png)
 
 ### 7. Approve new employees
 
@@ -98,7 +100,7 @@ On the owner dashboard, select the **User Management** tab. New signups appear u
 
 Check that each name is someone you actually hired before approving. Pending accounts cannot see or do anything, and up to 20 can wait at once. If someone signs up with an email that already has an account, they see the usual "waiting for approval" message but no new request appears, so signup can never be used to find out who has an account.
 
-<!-- screenshot: Waiting for Approval with Approve and Reject -->
+![User Management with Jordan Hayes under Waiting for Approval, with Approve and Reject buttons](images/11-users-waiting-approval.png)
 
 ### 8. Manage users
 
@@ -126,7 +128,7 @@ You will see one of three results:
 - **"Not documented"**, when no approved procedure contains the answer. Handoff does not guess. Your question is sent to the owner as a knowledge gap, so it can be documented.
 - **"Temporarily unavailable"**, when the AI service is busy or has reached its usage limit. Nothing was recorded; wait a moment and ask again.
 
-<!-- screenshot: an answer with citation and last-confirmed date -->
+![An answer to "How often should we descale the espresso machine?" citing the approved Descaling the Espresso Machine procedure, last confirmed September 29, 2026](images/27-descale-answered.png)
 
 ### Tips for good results
 
