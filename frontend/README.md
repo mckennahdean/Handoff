@@ -12,15 +12,20 @@ Vue 3 application that provides the user interface for capturing procedures, rev
 
 ## Views
 
-- `HomeView` — Landing page
-- `LoginView` / `SignupView` — Authentication (alpha uses `localStorage`; server-side auth is planned for beta)
-- `OwnerDashboardView` — Owner navigation hub
-- `EmployeeDashboardView` — Employee navigation hub
-- `CaptureProcedureView` — Record, upload, or type a procedure for AI structuring
-- `ProcedureReviewView` — Owner review and approval of AI-structured procedures
-- `ProceduresView` — List of approved procedures
-- `QueryView` — Ask Handoff questions and receive grounded answers
-- `GapsView` — Documentation gaps identified from unanswered queries
+- `LoginView` and `SignupView`: sign-in and signup. Every signup after the first owner waits for approval.
+- `RecoverAccountView`: reset a forgotten password with a recovery code.
+- `RecoveryCodesView`: shown once after a first sign-in to save recovery codes.
+- `OwnerDashboardView`: owner navigation hub with live counts.
+- `UserManagementView`: owner-only approval queue, roles, recovery codes, and account deletion.
+- `EmployeeDashboardView`: employee navigation hub.
+- `CaptureProcedureView`: record, upload, or type a procedure for AI structuring.
+- `ProcedureReviewView`: owner review, capture gaps, and approval of AI-structured procedures.
+- `ProceduresView`: approved procedures (owners also see drafts).
+- `QueryView`: ask Handoff questions and receive grounded answers.
+- `GapsView`: knowledge gaps from questions Handoff could not answer.
+- `NotFoundView`: custom 404 page with team pet photos.
+
+Every request goes through `src/api.js`, which attaches the login token and returns to the login page when the server rejects a session.
 
 ## Running the frontend
 
