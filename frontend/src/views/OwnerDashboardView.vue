@@ -156,7 +156,7 @@ const goTo = (path) => {
         <!-- Record / upload -->
         <button
           class="action-card"
-          @click="goTo('/procedures')"
+          @click="goTo('/capture-procedure')"
         >
           <div class="action-icon">
             +
