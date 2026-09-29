@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiFetch, getCurrentUser, errorMessage } from '../api.js'
 
@@ -11,8 +11,22 @@ const message = ref('')
 const error = ref('')
 const savingRoleId = ref(null)
 const deletingUserId = ref(null)
+const approvingUserId = ref(null)
+const issuingUserId = ref(null)
+
+// Recovery codes just issued by the owner, shown once.
+const issuedCodes = ref(null)
 
 const currentUser = getCurrentUser()
+
+// New signups wait here until an owner approves or rejects them.
+const pendingUsers = computed(() =>
+  users.value.filter((user) => user.status === 'pending')
+)
+
+const activeUsers = computed(() =>
+  users.value.filter((user) => user.status !== 'pending')
+)
 
 // Return to the Owner Dashboard.
 const goToDashboard = () => {
@@ -96,15 +110,46 @@ const updateRole = async (user) => {
   }
 }
 
-// Delete an employee account.
-const deleteEmployee = async (user) => {
+// Let a pending account sign in.
+const approveUser = async (user) => {
+  approvingUserId.value = user.id
+  message.value = ''
+  error.value = ''
+
+  try {
+    const response = await apiFetch(
+      `/api/business/users/${user.id}/approve`,
+      { method: 'POST' }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(
+        errorMessage(data, 'Unable to approve the account.')
+      )
+    }
+
+    user.status = data.status
+    message.value = `${user.name} can now sign in.`
+  } catch (err) {
+    // Reload first so the list matches the database. Reloading
+    // clears old messages, so set the error afterward.
+    await loadUsers()
+    error.value = err.message || 'Unable to approve the account.'
+  } finally {
+    approvingUserId.value = null
+  }
+}
+
+// Delete an employee account, or reject a pending signup.
+// Both remove the account, so they share one request.
+const removeAccount = async (user, question, doneMessage) => {
   if (user.role !== 'employee') {
     return
   }
 
-  const confirmed = window.confirm(
-    `Delete ${user.name}'s employee account? This cannot be undone.`
-  )
+  const confirmed = window.confirm(question)
 
   if (!confirmed) {
     return
@@ -126,7 +171,7 @@ const deleteEmployee = async (user) => {
 
     if (!response.ok) {
       throw new Error(
-        errorMessage(data, 'Unable to delete the employee account.')
+        errorMessage(data, 'Unable to remove the account.')
       )
     }
 
@@ -134,11 +179,71 @@ const deleteEmployee = async (user) => {
       (existingUser) => existingUser.id !== user.id
     )
 
-    message.value = `${user.name}'s account was deleted.`
+    message.value = doneMessage
   } catch (err) {
-    error.value = err.message || 'Unable to delete the employee account.'
+    error.value = err.message || 'Unable to remove the account.'
   } finally {
     deletingUserId.value = null
+  }
+}
+
+const deleteEmployee = (user) => removeAccount(
+  user,
+  `Delete ${user.name}'s employee account? This cannot be undone.`,
+  `${user.name}'s account was deleted.`
+)
+
+const rejectUser = (user) => removeAccount(
+  user,
+  `Reject ${user.name}'s request? Their pending account will be deleted.`,
+  `${user.name}'s request was rejected.`
+)
+
+// Give someone a fresh set of recovery codes, shown here once
+// so the owner can hand them over. The old set stops working.
+const issueCodes = async (user) => {
+  const confirmed = window.confirm(
+    `Create new recovery codes for ${user.name}? ` +
+    'Their old codes will stop working.'
+  )
+
+  if (!confirmed) {
+    return
+  }
+
+  issuingUserId.value = user.id
+  issuedCodes.value = null
+  message.value = ''
+  error.value = ''
+
+  try {
+    const response = await apiFetch(
+      `/api/business/users/${user.id}/recovery-codes`,
+      { method: 'POST' }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(
+        errorMessage(data, 'Unable to create recovery codes.')
+      )
+    }
+
+    issuedCodes.value = { name: user.name, codes: data.codes }
+  } catch (err) {
+    error.value = err.message || 'Unable to create recovery codes.'
+  } finally {
+    issuingUserId.value = null
+  }
+}
+
+const copyIssuedCodes = async () => {
+  try {
+    await navigator.clipboard.writeText(issuedCodes.value.codes.join('\n'))
+    message.value = 'Codes copied.'
+  } catch {
+    error.value = 'Copy failed. Please copy the codes manually.'
   }
 }
 
@@ -152,7 +257,7 @@ onMounted(loadUsers)
         <p class="eyebrow">USER MANAGEMENT</p>
         <h1>Manage Users</h1>
         <p class="intro">
-          Manage your team's accounts and assign Owner or Employee privileges.
+          Approve new employees, and manage your team's accounts and roles.
         </p>
       </div>
 
@@ -165,16 +270,8 @@ onMounted(loadUsers)
       </button>
     </section>
 
-    <section class="content-card">
-      <div class="section-heading">
-        <div>
-          <h2>Users</h2>
-          <p>
-            Owners can change user roles or remove employee accounts.
-          </p>
-        </div>
-      </div>
-
+    <!-- Success and error messages for every action on this page -->
+    <div class="page-messages">
       <p
         v-if="message"
         class="success-message"
@@ -188,13 +285,125 @@ onMounted(loadUsers)
       >
         {{ error }}
       </p>
+    </div>
+
+    <!-- Recovery codes the owner just issued, shown once -->
+    <section
+      v-if="issuedCodes"
+      class="content-card issued-codes"
+    >
+      <div class="section-heading">
+        <h2>New Recovery Codes for {{ issuedCodes.name }}</h2>
+
+        <p>
+          Give these to them directly. They are shown only once, and
+          each code works once on the login page.
+        </p>
+      </div>
+
+      <ol class="code-grid">
+        <li v-for="code in issuedCodes.codes" :key="code">
+          {{ code }}
+        </li>
+      </ol>
+
+      <div class="code-actions">
+        <button
+          type="button"
+          class="codes-button"
+          @click="copyIssuedCodes"
+        >
+          Copy Codes
+        </button>
+
+        <button
+          type="button"
+          class="approve-button"
+          @click="issuedCodes = null"
+        >
+          Done
+        </button>
+      </div>
+    </section>
+
+    <!-- New signups waiting for an owner's decision -->
+    <section class="content-card pending-requests">
+      <div class="section-heading">
+        <h2>Waiting for Approval</h2>
+
+        <p>
+          New employees sign up on their own. They cannot see or do
+          anything until an owner approves them.
+        </p>
+      </div>
+
+      <div v-if="loading" class="empty-state">
+        Loading requests...
+      </div>
+
+      <div
+        v-else-if="pendingUsers.length === 0"
+        class="empty-state"
+      >
+        No one is waiting for approval.
+      </div>
+
+      <div v-else class="user-list">
+        <div class="user-row user-header">
+          <span>Name</span>
+          <span>Email</span>
+          <span>Actions</span>
+          <span></span>
+        </div>
+
+        <div
+          v-for="user in pendingUsers"
+          :key="user.id"
+          class="user-row"
+        >
+          <div>
+            <strong>{{ user.name }}</strong>
+          </div>
+
+          <span>{{ user.email }}</span>
+
+          <button
+            class="approve-button"
+            type="button"
+            :disabled="approvingUserId === user.id"
+            @click="approveUser(user)"
+          >
+            {{ approvingUserId === user.id ? 'Approving...' : 'Approve' }}
+          </button>
+
+          <button
+            class="danger-button"
+            type="button"
+            :disabled="deletingUserId === user.id"
+            @click="rejectUser(user)"
+          >
+            {{ deletingUserId === user.id ? 'Rejecting...' : 'Reject' }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-card">
+      <div class="section-heading">
+        <div>
+          <h2>Users</h2>
+          <p>
+            Owners can change user roles or remove employee accounts.
+          </p>
+        </div>
+      </div>
 
       <div v-if="loading" class="empty-state">
         Loading users...
       </div>
 
       <div
-        v-else-if="users.length === 0"
+        v-else-if="activeUsers.length === 0"
         class="empty-state"
       >
         No users were found.
@@ -209,7 +418,7 @@ onMounted(loadUsers)
         </div>
 
         <div
-          v-for="user in users"
+          v-for="user in activeUsers"
           :key="user.id"
           class="user-row"
         >
@@ -239,22 +448,33 @@ onMounted(loadUsers)
             <option value="owner">Owner</option>
           </select>
 
-          <button
-            v-if="user.role === 'employee'"
-            class="danger-button"
-            type="button"
-            :disabled="deletingUserId === user.id"
-            @click="deleteEmployee(user)"
-          >
-            {{ deletingUserId === user.id ? 'Deleting...' : 'Delete' }}
-          </button>
+          <div class="row-actions">
+            <button
+              class="codes-button"
+              type="button"
+              :disabled="issuingUserId === user.id"
+              @click="issueCodes(user)"
+            >
+              {{ issuingUserId === user.id ? 'Creating...' : 'New Codes' }}
+            </button>
 
-          <span
-            v-else
-            class="owner-label"
-          >
-            Owner
-          </span>
+            <button
+              v-if="user.role === 'employee'"
+              class="danger-button"
+              type="button"
+              :disabled="deletingUserId === user.id"
+              @click="deleteEmployee(user)"
+            >
+              {{ deletingUserId === user.id ? 'Deleting...' : 'Delete' }}
+            </button>
+
+            <span
+              v-else
+              class="owner-label"
+            >
+              Owner
+            </span>
+          </div>
         </div>
       </div>
     </section>
@@ -392,7 +612,7 @@ onMounted(loadUsers)
 
 .user-row {
   display: grid;
-  grid-template-columns: 1.2fr 1.5fr 150px 110px;
+  grid-template-columns: 1.2fr 1.5fr 150px 210px;
   align-items: center;
   gap: 20px;
   min-height: 70px;
@@ -502,6 +722,98 @@ onMounted(loadUsers)
   color: #777777;
   font-size: 14px;
   text-align: center;
+}
+
+/* =========================================
+   Messages and Pending Requests
+   ========================================= */
+
+.page-messages {
+  max-width: 1150px;
+  margin: 0 auto;
+}
+
+.pending-requests {
+  margin-bottom: 24px;
+}
+
+.approve-button {
+  padding: 9px 14px;
+  border: none;
+  border-radius: 7px;
+  background: #275b4f;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.approve-button:hover {
+  opacity: 0.9;
+}
+
+.approve-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   Recovery Codes
+   ========================================= */
+
+.issued-codes {
+  margin-bottom: 24px;
+  border-color: #275b4f;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.codes-button {
+  padding: 9px 14px;
+  border: 1px solid #275b4f;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #275b4f;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.codes-button:hover {
+  background: #275b4f;
+  color: #ffffff;
+}
+
+.codes-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.code-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 30px;
+  margin: 0 0 20px;
+  padding: 18px 18px 18px 42px;
+  border: 1px dashed #d8d2c8;
+  border-radius: 10px;
+  background: #faf8f4;
+  color: #275b4f;
+  font-family: 'Courier New', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.code-actions {
+  display: flex;
+  gap: 10px;
 }
 
 /* =========================================

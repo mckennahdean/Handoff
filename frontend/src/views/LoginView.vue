@@ -1,10 +1,11 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { apiFetch, saveSession, errorMessage } from '../api.js'
 
 // Allows navigation between pages.
 const router = useRouter()
+const route = useRoute()
 
 // Stores the values entered into the login form.
 const email = ref('')
@@ -13,8 +14,22 @@ const password = ref('')
 // Controls whether the password is visible.
 const showPassword = ref(false)
 
+// Pages that send people here can leave a short explanation.
+const arrivalMessages = {
+  pending:
+    'Account created. Your business owner needs to approve it ' +
+    'before you can sign in.',
+  recovered: 'Password updated. You can now sign in.'
+}
+
 // Displays a message after the user takes an action.
-const message = ref('')
+const message = ref(
+  route.query.pending
+    ? arrivalMessages.pending
+    : route.query.recovered
+      ? arrivalMessages.recovered
+      : ''
+)
 
 // Signs the user in through the Handoff backend.
 const signIn = async () => {
@@ -41,6 +56,12 @@ const signIn = async () => {
 
     saveSession(data.access_token, data.user)
 
+    // First sign-in (or every code used up): show a fresh set once.
+    if (data.needs_recovery_codes) {
+      router.push('/recovery-codes')
+      return
+    }
+
     router.push(
       data.user.role === 'owner'
         ? '/owner-dashboard'
@@ -57,11 +78,9 @@ const createAccount = () => {
   router.push('/signup')
 }
 
-// Handles the forgot-password action.
-// This remains a mock until backend authentication is implemented.
-const forgotPassword = () => {
-  message.value =
-    'Password recovery will be connected to the Handoff backend.'
+// Sends the user to the recovery-code password reset page.
+const goToRecover = () => {
+  router.push('/recover')
 }
 </script>
 
@@ -134,9 +153,9 @@ const forgotPassword = () => {
                 <button
                   type="button"
                   class="forgot-button"
-                  @click="forgotPassword"
+                  @click="goToRecover"
                 >
-                  Forgot Password?
+                  Forgot password?
                 </button>
               </div>
 

@@ -4,7 +4,7 @@ AI knowledge capture and grounded Q&A for small businesses.
 
 An owner explains a procedure out loud. Handoff transcribes it, structures it into steps and warnings, and asks about anything the owner skipped. Nothing reaches employees until the owner approves it. Employees then ask questions in their own words and get an answer with a citation, or an honest "not documented" that becomes a knowledge gap for the owner to fill.
 
-<!-- screenshot: answered question with citation and last-confirmed date -->
+![Ask Handoff answering "How often should we descale the espresso machine?" with a citation to the approved Descaling the Espresso Machine procedure and its last-confirmed date](docs/images/27-descale-answered.png)
 
 ## Why Handoff
 
@@ -18,7 +18,8 @@ Small businesses keep their procedures in people's heads. When that person is of
 - **Grounded answers.** Every answer cites its procedure and the date the owner last confirmed it.
 - **Two abstention gates.** The Threshold Gate stops questions that nothing in the knowledge base is close to, without an AI call. The Generation Gate has the AI confirm that the closest procedure actually contains the answer.
 - **Knowledge gaps.** Unanswered questions are logged, grouped by meaning, and ranked by how often they are asked, with every wording kept ("Also Asked As"). Approving a procedure that answers a gap resolves it automatically; deleting that procedure reopens it.
-- **Roles and security.** Owner and employee accounts, invite codes, Argon2 password hashing, and signed login tokens. A test checks that every non-public API route requires a login.
+- **Accounts and approval.** Owner and employee roles. New employees sign up on their own and wait, unable to see anything, until an owner approves them.
+- **Account security.** Argon2 password hashing; signed login tokens checked against the database on every request; a 15-minute pause after 5 failed attempts; one-time recovery codes for forgotten passwords; and sessions that end when a password is reset. A test checks that every non-public API route requires a login.
 
 ## Performance
 
@@ -31,7 +32,7 @@ Measured offline on Maple & Main Coffee, a fictional coffee shop created for tes
 | Abstained when it should | 14 of 14 |
 | Answer quality | 28 fully correct, 1 partial, 0 invented facts |
 | Median response time | 1.3 to 3.6 seconds across two runs |
-| Automated tests | 78 passing, 77% line coverage (CI requires at least 70%) |
+| Automated tests | 110 passing, 89% line coverage (CI requires at least 70%) |
 
 ### Known limitations
 
@@ -39,7 +40,17 @@ Measured offline on Maple & Main Coffee, a fictional coffee shop created for tes
 - **Grouping by topic, not intent.** Different questions on the same topic can be grouped together (similarity up to 0.807). "Also Asked As" keeps every wording visible so the owner decides.
 - **Auto-resolve uses one gate.** Resolving a gap on approval uses the Threshold Gate only. In the evaluation, 1 of 14 should-abstain questions would be marked resolved if its closest procedure were re-approved. Adding the Generation Gate to auto-resolve is planned future work.
 - **AI provider limits.** On the Gemini free tier, text generation is limited to 15 requests per minute, and response times depend on the provider's load (the slowest measured answer took 33 seconds).
+- **No email.** Email addresses are sign-in names only; Handoff never sends email. Forgotten passwords are reset with one-time recovery codes, with an owner or the server administrator as the fallback.
 - **One business per install.**
+
+### Future work
+
+- **Generation Gate in auto-resolve**, closing the limitation above.
+- **Email verification, invitations, and password reset by email.** A local mail-catcher container (such as Mailpit) would let demos and tests run without a mail provider.
+- **Passkeys (WebAuthn) and authenticator-app two-factor sign-in**, with the existing recovery codes as the backup.
+- **Startup resilience:** retry the database connection when the backend starts before the database is ready.
+- **Per-page browser tab titles.**
+- **Scale:** a vector index, top-k retrieval, schema migrations, and archiving instead of deleting. See [At larger scale](docs/architecture/README.md#at-larger-scale).
 
 ## Quick start (Docker)
 
@@ -58,7 +69,7 @@ docker compose up --build -d
 docker compose exec backend python -m backend.seed_demo
 ```
 
-The second command is optional. It loads the Maple & Main demo procedures and takes about two minutes. Open http://localhost:8080 and create the first account, which becomes the owner.
+The second command is optional. It loads the Maple & Main demo procedures and takes about two minutes. Open http://localhost:8080 and create the first account, which becomes the owner. Save the recovery codes Handoff shows after your first sign-in.
 
 Developer setup, running tests, and troubleshooting: [docs/INSTALL.md](docs/INSTALL.md).
 

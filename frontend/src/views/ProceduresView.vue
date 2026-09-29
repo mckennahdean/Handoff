@@ -364,12 +364,9 @@ onMounted(() => {
 
           </div>
 
-          <div
-
-            v-if="isOwner"
-            class="card-actions"
-          >
+          <div class="card-actions">
             <RouterLink
+              v-if="isOwner"
               :to="{
                 path: '/procedure-review',
                 query: { id: procedure.id }
@@ -379,6 +376,16 @@ onMounted(() => {
               Review
             </RouterLink>
 
+            <RouterLink
+              v-else
+              :to="{
+                path: '/procedure',
+                query: { id: procedure.id }
+              }"
+              class="review-button"
+            >
+              View
+            </RouterLink>
           </div>
 
         </article>

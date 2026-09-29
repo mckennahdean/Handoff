@@ -172,6 +172,31 @@ class User(Base):
         String(20)
     )
 
+    # Login throttling: consecutive failures and a temporary lock.
+    failed_login_attempts: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        server_default="0"
+    )
+
+    locked_until: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    # Set when a password is reset. Tokens issued earlier stop working.
+    password_changed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    # "active" accounts can sign in; "pending" ones wait for owner approval.
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="active",
+        server_default="active"
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc)
@@ -186,9 +211,32 @@ class Business(Base):
         String(200)
     )
 
-    invite_code: Mapped[str] = mapped_column(
-        String(20),
-        unique=True
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class RecoveryCode(Base):
+    """One-time recovery codes. Only a hash of each code is stored,
+    so the plain codes exist only on the page that shows them once."""
+    __tablename__ = "recovery_codes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    # CASCADE: deleting an account deletes its recovery codes.
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True
+    )
+
+    code_hash: Mapped[str] = mapped_column(
+        String(255)
+    )
+
+    used_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
     )
 
     created_at: Mapped[datetime] = mapped_column(

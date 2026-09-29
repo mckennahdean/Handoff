@@ -141,15 +141,6 @@ const goTo = (path) => {
       </div>
 
     </section>
-
-    <!-- Prototype notice -->
-    <section class="prototype-note">
-      <strong>Prototype:</strong>
-      Account information and permissions are currently
-      simulated and will be connected to the Handoff backend
-      during integration.
-    </section>
-
   </main>
 </template>
 
@@ -433,29 +424,6 @@ const goTo = (path) => {
   font-size: 13px;
   line-height: 1.5;
 }
-
-
-/* =========================================
-   Prototype Notice
-   ========================================= */
-
-.prototype-note {
-  max-width: 1000px;
-  margin: 18px auto 0;
-  padding: 14px 18px;
-  box-sizing: border-box;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #777777;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-
-.prototype-note strong {
-  color: #275b4f;
-}
-
 
 /* =========================================
    Tablet

@@ -1,32 +1,23 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { apiFetch, saveSession, errorMessage } from '../api.js'
+import { apiFetch, errorMessage } from '../api.js'
 
-// Allows navigation between the login and sign-up screens.
+// Allows navigation between pages.
 const router = useRouter()
 
-// Stores the values entered into the sign-up form.
-const name = ref('')
-const business = ref('')
+// Stores the values entered into the reset form.
 const email = ref('')
-const password = ref('')
+const recoveryCode = ref('')
+const newPassword = ref('')
 const confirmPassword = ref('')
-
-// True only when no accounts exist yet. The first account
-// becomes the Owner and names the business. Everyone after
-// that joins as a pending Employee until an Owner approves them.
-const needsOwner = ref(false)
 
 // Controls whether the password fields are visible.
 const showPassword = ref(false)
-const showConfirmPassword = ref(false)
 
-// Password rules shown live as the user types. These mirror the
-// backend rules in auth_service.password_problems, which is the
-// real enforcement. The frontend check is for user experience.
+// Same live rules as the sign-up page. The backend enforces them.
 const passwordChecks = computed(() => {
-  const value = password.value
+  const value = newPassword.value
 
   return [
     { label: 'At least 12 characters', met: value.length >= 12 },
@@ -44,23 +35,11 @@ const passwordIsValid = computed(() =>
 // Displays a message after the user takes an action.
 const message = ref('')
 
-// Ask the backend whether this is the first account.
-onMounted(async () => {
-  try {
-    const response = await apiFetch('/api/auth/setup-status')
-    const data = await response.json()
-
-    needsOwner.value = data.needs_owner
-  } catch {
-    message.value = 'Unable to reach the Handoff server.'
-  }
-})
-
-// Handles account creation through the Handoff backend.
-const createAccount = async () => {
+// Sets a new password with one of the user's recovery codes.
+const resetPassword = async () => {
   message.value = ''
 
-  if (password.value !== confirmPassword.value) {
+  if (newPassword.value !== confirmPassword.value) {
     message.value = 'Passwords do not match. Please try again.'
     return
   }
@@ -71,49 +50,27 @@ const createAccount = async () => {
     return
   }
 
-  const body = {
-    name: name.value,
-    email: email.value,
-    password: password.value
-  }
-
-  if (needsOwner.value) {
-    body.business_name = business.value
-  }
-
   try {
-    const response = await apiFetch('/api/auth/signup', {
+    const response = await apiFetch('/api/auth/recover', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        email: email.value,
+        recovery_code: recoveryCode.value,
+        new_password: newPassword.value
+      })
     })
 
     const data = await response.json()
 
     if (!response.ok) {
-      message.value = errorMessage(
-        data,
-        'Unable to create account. Please check the form.'
-      )
+      message.value = errorMessage(data, 'Unable to reset your password.')
       return
     }
 
-    // Employees wait for an Owner's approval, so there is no
-    // login token yet. The login page explains what happens next.
-    if (data.status === 'pending') {
-      router.push({ path: '/login', query: { pending: '1' } })
-      return
-    }
-
-    saveSession(data.access_token, data.user)
-
-    router.push(
-      data.user.role === 'owner'
-        ? '/owner-dashboard'
-        : '/employee-dashboard'
-    )
+    router.push({ path: '/login', query: { recovered: '1' } })
   } catch {
     message.value =
       'Unable to reach the Handoff server. Please try again.'
@@ -127,10 +84,10 @@ const goToLogin = () => {
 </script>
 
 <template>
-  <main class="signup-page">
+  <main class="login-page">
 
-    <!-- Main sign-up card -->
-    <section class="signup-card">
+    <!-- Main login card -->
+    <section class="login-card">
 
       <!-- Left branding panel -->
       <div class="brand-panel">
@@ -158,48 +115,22 @@ const goToLogin = () => {
         </div>
       </div>
 
-      <!-- Right sign-up panel -->
+      <!-- Right login panel -->
       <div class="form-panel">
         <div class="form-content">
 
           <!-- Heading -->
           <div class="heading-section">
-            <h1>Create Your Account</h1>
+            <h1>Reset Your Password</h1>
 
             <p>
-              Get started with Handoff and keep your business
-              knowledge in one place.
+              Enter your email, one of your recovery codes, and a
+              new password. Each code works once.
             </p>
           </div>
 
-          <!-- Sign-up form -->
-          <form @submit.prevent="createAccount">
-
-            <!-- Full name -->
-            <div class="form-group">
-              <label for="name">Full Name</label>
-
-              <input
-                id="name"
-                v-model="name"
-                type="text"
-                placeholder="Your full name"
-                required
-              />
-            </div>
-
-            <!-- Business name: first account only (becomes the Owner) -->
-            <div v-if="needsOwner" class="form-group">
-              <label for="business">Business Name (you will be the Owner)</label>
-
-              <input
-                id="business"
-                v-model="business"
-                type="text"
-                placeholder="Your business or organization"
-                required
-              />
-            </div>
+          <!-- Reset form -->
+          <form @submit.prevent="resetPassword">
 
             <!-- Email -->
             <div class="form-group">
@@ -214,17 +145,31 @@ const goToLogin = () => {
               />
             </div>
 
-            <!-- Password -->
+            <!-- Recovery code -->
             <div class="form-group">
-              <label for="password">Password</label>
+              <label for="recovery-code">Recovery Code</label>
+
+              <input
+                id="recovery-code"
+                v-model="recoveryCode"
+                type="text"
+                placeholder="For example, K7QPM-2XH9R"
+                autocomplete="off"
+                required
+              />
+            </div>
+
+            <!-- New password -->
+            <div class="form-group">
+              <label for="new-password">New Password</label>
 
               <div class="password-input">
                 <input
-                  id="password"
-                  v-model="password"
+                  id="new-password"
+                  v-model="newPassword"
                   :type="showPassword ? 'text' : 'password'"
-                  placeholder="Create a password"
-                  maxlength="128"
+                  placeholder="Choose a new password"
+                  autocomplete="new-password"
                   required
                 />
 
@@ -285,89 +230,39 @@ const goToLogin = () => {
                   {{ check.met ? '✓' : '○' }} {{ check.label }}
                 </li>
               </ul>
-
             </div>
 
-            <!-- Confirm password -->
+            <!-- Confirm new password -->
             <div class="form-group">
-              <label for="confirm-password">Confirm Password</label>
+              <label for="confirm-password">Confirm New Password</label>
 
-              <div class="password-input">
-                <input
-                  id="confirm-password"
-                  v-model="confirmPassword"
-                  :type="showConfirmPassword ? 'text' : 'password'"
-                  placeholder="Re-enter your password"
-                  required
-                />
-
-                <!-- Confirm password visibility toggle -->
-                <button
-                  type="button"
-                  class="password-toggle"
-                  :aria-label="
-                    showConfirmPassword
-                      ? 'Hide password'
-                      : 'Show password'
-                  "
-                  @click="showConfirmPassword = !showConfirmPassword"
-                >
-
-                  <!-- Hidden password icon -->
-                  <svg
-                    v-if="!showConfirmPassword"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"
-                    />
-
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="2.5"
-                    />
-                  </svg>
-
-                  <!-- Visible password icon -->
-                  <svg
-                    v-else
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path d="M3 3l18 18" />
-
-                    <path
-                      d="M10.6 6.2A10.8 10.8 0 0 1 12 6c6.5 0 10 6 10 6a17.4 17.4 0 0 1-3.1 3.8"
-                    />
-
-                    <path
-                      d="M6.1 6.1C3.5 8.1 2 12 2 12s3.5 6 10 6c1.4 0 2.7-.3 3.8-.8"
-                    />
-                  </svg>
-
-                </button>
-              </div>
+              <input
+                id="confirm-password"
+                v-model="confirmPassword"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="Re-enter your new password"
+                autocomplete="new-password"
+                required
+              />
             </div>
 
-            <!-- Create account button -->
+            <!-- Reset button -->
             <button
               type="submit"
-              class="create-button"
+              class="signin-button"
             >
-              Create Account
+              Reset Password
             </button>
 
           </form>
 
-          <!-- Return to login -->
-          <div class="login-link">
-            <span>Already have an account?</span>
+          <!-- Back to sign in -->
+          <div class="signup-link">
+            <span>Remembered it?</span>
 
             <button
               type="button"
-              class="login-link-button"
+              class="signup-link-button"
               @click="goToLogin"
             >
               Sign In
@@ -397,10 +292,10 @@ const goToLogin = () => {
 <style scoped>
 
 /* =========================================
-   Overall Sign-Up Page
+   Overall Login Page
    ========================================= */
 
-.signup-page {
+.login-page {
   min-height: 100vh;
   width: 100%;
   display: flex;
@@ -413,10 +308,10 @@ const goToLogin = () => {
 
 
 /* =========================================
-   Main Sign-Up Card
+   Main Login Card
    ========================================= */
 
-.signup-card {
+.login-card {
   width: 100%;
   max-width: 1050px;
   min-height: 650px;
@@ -527,7 +422,7 @@ const goToLogin = () => {
    ========================================= */
 
 .heading-section {
-  margin-bottom: 28px;
+  margin-bottom: 32px;
 }
 
 
@@ -553,7 +448,7 @@ const goToLogin = () => {
    ========================================= */
 
 .form-group {
-  margin-bottom: 18px;
+  margin-bottom: 22px;
 }
 
 
@@ -596,74 +491,36 @@ const goToLogin = () => {
 
 
 /* =========================================
-   Account Role Selection
+   Password Label Row
    ========================================= */
 
-.role-options {
+.password-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+
+.password-label-row label {
+  margin-bottom: 8px;
+}
+
+
+.password-rules {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-
-.role-option {
-  display: flex !important;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 0;
-  padding: 14px;
-  box-sizing: border-box;
-  border: 1px solid #d8d2c8;
-  border-radius: 8px;
-  background: #ffffff;
-  cursor: pointer;
-  transition:
-    border-color 0.2s,
-    background 0.2s,
-    box-shadow 0.2s;
-}
-
-
-.role-option:hover {
-  border-color: #275b4f;
-}
-
-
-.role-option.selected {
-  border-color: #275b4f;
-  background: #f5f9f7;
-  box-shadow:
-    0 0 0 2px rgba(39, 91, 79, 0.08);
-}
-
-
-.role-option input[type='radio'] {
-  width: auto;
-  margin-top: 3px;
-  accent-color: #275b4f;
-  cursor: pointer;
-}
-
-
-.role-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-
-.role-title {
-  color: #275b4f;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-
-.role-description {
-  color: #6b6b6b;
+  gap: 4px 12px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  color: #a0a0a0;
   font-size: 12px;
-  font-weight: 400;
-  line-height: 1.4;
+}
+
+
+.password-rules li.met {
+  color: #275b4f;
+  font-weight: 600;
 }
 
 
@@ -718,32 +575,12 @@ const goToLogin = () => {
   color: #d26f3d;
 }
 
-/* =========================================
-   Password Requirements
-   ========================================= */
-
-.password-rules {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px 12px;
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-  color: #a0a0a0;
-  font-size: 12px;
-}
-
-
-.password-rules li.met {
-  color: #275b4f;
-  font-weight: 600;
-}
 
 /* =========================================
-   Create Account Button
+   Sign In Button
    ========================================= */
 
-.create-button {
+.signin-button {
   width: 100%;
   margin-top: 5px;
   padding: 15px;
@@ -762,7 +599,7 @@ const goToLogin = () => {
 }
 
 
-.create-button:hover {
+.signin-button:hover {
   opacity: 0.92;
   transform: translateY(-1px);
   box-shadow:
@@ -770,16 +607,16 @@ const goToLogin = () => {
 }
 
 
-.create-button:active {
+.signin-button:active {
   transform: translateY(0);
 }
 
 
 /* =========================================
-   Login Link
+   Sign-Up Link
    ========================================= */
 
-.login-link {
+.signup-link {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -790,7 +627,7 @@ const goToLogin = () => {
 }
 
 
-.login-link-button {
+.signup-link-button {
   padding: 0;
   border: none;
   background: none;
@@ -802,7 +639,7 @@ const goToLogin = () => {
 }
 
 
-.login-link-button:hover {
+.signup-link-button:hover {
   text-decoration: underline;
 }
 
@@ -841,7 +678,7 @@ const goToLogin = () => {
 
 @media (max-width: 850px) {
 
-  .signup-card {
+  .login-card {
     grid-template-columns: 1fr;
     max-width: 600px;
   }
@@ -866,6 +703,7 @@ const goToLogin = () => {
   .form-panel {
     padding: 50px 45px;
   }
+
 }
 
 
@@ -875,11 +713,11 @@ const goToLogin = () => {
 
 @media (max-width: 500px) {
 
-  .signup-page {
+  .login-page {
     padding: 15px;
   }
 
-  .signup-card {
+  .login-card {
     border-radius: 14px;
   }
 
@@ -908,14 +746,16 @@ const goToLogin = () => {
     font-size: 30px;
   }
 
-  .role-options {
-    grid-template-columns: 1fr;
+  .password-label-row {
+    align-items: flex-start;
+    gap: 10px;
   }
 
-  .login-link {
+  .signup-link {
     flex-direction: column;
     gap: 7px;
   }
+
 }
 
 </style>

@@ -38,6 +38,18 @@ const resetResult = () => {
   errorText.value = ''
 }
 
+// Enter asks the question; Shift+Enter still adds a new line.
+// Skip Enter while an input method is composing text, so
+// confirming a character does not send a half-typed question.
+const askOnEnter = (event) => {
+  if (event.isComposing) {
+    return
+  }
+
+  event.preventDefault()
+  askHandoff()
+}
+
 const askHandoff = async () => {
   if (!question.value.trim()) {
     return
@@ -155,6 +167,7 @@ const useExample = () => {
           rows="5"
           placeholder="For example: What should I do when closing the store?"
           :disabled="isLoading"
+          @keydown.enter.exact="askOnEnter"
         ></textarea>
 
         <div class="question-actions">

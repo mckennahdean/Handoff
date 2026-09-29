@@ -8,11 +8,8 @@ from fastapi.testclient import TestClient
 import backend.auth_routes as auth_routes
 import backend.main as main_module
 from backend.auth_service import (
-    INVITE_CODE_ALPHABET,
-    INVITE_CODE_LENGTH,
     create_access_token,
     decode_access_token,
-    generate_invite_code,
     get_current_user,
     hash_password,
     password_problems,
@@ -29,7 +26,8 @@ FAKE_EMPLOYEE = SimpleNamespace(
     id=2,
     name="Test Employee",
     email="emp@test.com",
-    role="employee"
+    role="employee",
+    status="active"
 )
 
 VALID_PROCEDURE = {
@@ -76,6 +74,8 @@ def test_token_round_trip():
 
     assert payload["sub"] == "5"
     assert payload["role"] == "owner"
+    # Issued-at time, so a password reset can end older sessions.
+    assert payload["iat"] <= datetime.now(timezone.utc).timestamp()
 
 
 def test_expired_token_is_rejected():
@@ -143,39 +143,7 @@ def test_employee_cannot_approve_procedure():
     assert response.json()["detail"] == "Owner access required."
 
 
-def test_employee_cannot_view_invite_code():
-    main_module.app.dependency_overrides[get_current_user] = (
-        lambda: FAKE_EMPLOYEE
-    )
-
-    response = client.get("/api/business/invite-code")
-
-    assert response.status_code == 403
-
-
 # ---------- Signup and login ----------
-
-def test_signup_rejects_invalid_invite_code(monkeypatch):
-    monkeypatch.setattr(auth_routes, "count_users", lambda: 1)
-    monkeypatch.setattr(
-        auth_routes,
-        "invite_code_is_valid",
-        lambda code: False
-    )
-
-    response = client.post(
-        "/api/auth/signup",
-        json={
-            "name": "Emp",
-            "email": "emp@test.com",
-            "password": STRONG_PASSWORD,
-            "invite_code": "WRONG123"
-        }
-    )
-
-    assert response.status_code == 403
-    assert response.json()["detail"] == "Invalid invite code."
-
 
 def test_signup_rejects_short_password():
     response = client.post(
@@ -203,14 +171,8 @@ def test_login_with_bad_credentials_returns_401(monkeypatch):
     )
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Invalid email or password."
+    assert response.json()["detail"].startswith("Invalid email or password.")
 
-
-def test_invite_code_format():
-    code = generate_invite_code()
-
-    assert len(code) == INVITE_CODE_LENGTH
-    assert all(char in INVITE_CODE_ALPHABET for char in code)
 
 # ---------- Password policy ----------
 
@@ -243,7 +205,8 @@ FAKE_OWNER = SimpleNamespace(
     id=1,
     name="Test Owner",
     email="owner@test.com",
-    role="owner"
+    role="owner",
+    status="active"
 )
 
 
@@ -354,3 +317,191 @@ def test_owner_accounts_cannot_be_deleted(monkeypatch):
     response = client.delete("/api/business/users/1")
 
     assert response.status_code == 400
+
+
+# ---------- Owner approval ----------
+
+PENDING_EMPLOYEE = SimpleNamespace(
+    id=3,
+    name="Pending Employee",
+    email="pending@test.com",
+    role="employee",
+    status="pending"
+)
+
+EMPLOYEE_SIGNUP = {
+    "name": "New Employee",
+    "email": "new@test.com",
+    "password": STRONG_PASSWORD
+}
+
+
+def test_signup_after_the_owner_waits_for_approval(monkeypatch):
+    created = []
+    monkeypatch.setattr(auth_routes, "count_users", lambda: 1)
+    monkeypatch.setattr(auth_routes, "count_pending_users", lambda: 0)
+    monkeypatch.setattr(auth_routes, "get_user_by_email", lambda email: None)
+    monkeypatch.setattr(
+        auth_routes,
+        "create_employee_account",
+        lambda name, email, password: created.append(email)
+    )
+
+    response = client.post("/api/auth/signup", json=EMPLOYEE_SIGNUP)
+
+    assert response.status_code == 201
+    assert response.json()["status"] == "pending"
+    assert "access_token" not in response.json()
+    assert created == ["new@test.com"]
+
+
+def test_signup_gives_the_same_answer_for_an_existing_email(monkeypatch):
+    created = []
+    monkeypatch.setattr(auth_routes, "count_users", lambda: 1)
+    monkeypatch.setattr(auth_routes, "count_pending_users", lambda: 0)
+    monkeypatch.setattr(
+        auth_routes, "get_user_by_email", lambda email: FAKE_EMPLOYEE
+    )
+    monkeypatch.setattr(
+        auth_routes,
+        "create_employee_account",
+        lambda name, email, password: created.append(email)
+    )
+
+    response = client.post("/api/auth/signup", json=EMPLOYEE_SIGNUP)
+
+    assert response.status_code == 201
+    assert response.json() == auth_routes.PENDING_SIGNUP_RESPONSE
+    assert created == []
+
+
+def test_signup_is_refused_when_too_many_accounts_are_pending(monkeypatch):
+    monkeypatch.setattr(auth_routes, "count_users", lambda: 1)
+    monkeypatch.setattr(
+        auth_routes,
+        "count_pending_users",
+        lambda: auth_routes.MAX_PENDING_ACCOUNTS
+    )
+
+    response = client.post("/api/auth/signup", json=EMPLOYEE_SIGNUP)
+
+    assert response.status_code == 429
+
+
+def test_pending_user_cannot_log_in(monkeypatch):
+    monkeypatch.setattr(
+        auth_routes,
+        "authenticate_user",
+        lambda email, password: PENDING_EMPLOYEE
+    )
+
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "pending@test.com", "password": STRONG_PASSWORD}
+    )
+
+    assert response.status_code == 403
+    assert "approval" in response.json()["detail"]
+
+
+def test_employee_cannot_approve_accounts():
+    log_in_as(FAKE_EMPLOYEE)
+
+    response = client.post("/api/business/users/3/approve")
+
+    assert response.status_code == 403
+
+
+def test_owner_can_approve_a_pending_account(monkeypatch):
+    log_in_as(FAKE_OWNER)
+    monkeypatch.setattr(
+        auth_routes,
+        "approve_user",
+        lambda user_id: SimpleNamespace(
+            **{**vars(PENDING_EMPLOYEE), "status": "active"}
+        )
+    )
+
+    response = client.post("/api/business/users/3/approve")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "active"
+
+
+# ---------- Recovery codes ----------
+
+RECOVER_REQUEST = {
+    "email": "emp@test.com",
+    "recovery_code": "ABCDE-FGH23",
+    "new_password": STRONG_PASSWORD
+}
+
+
+def test_login_says_when_recovery_codes_are_needed(monkeypatch):
+    monkeypatch.setattr(
+        auth_routes,
+        "authenticate_user",
+        lambda email, password: FAKE_OWNER
+    )
+    monkeypatch.setattr(
+        auth_routes, "has_unused_recovery_codes", lambda user_id: False
+    )
+
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "owner@test.com", "password": STRONG_PASSWORD}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["needs_recovery_codes"] is True
+
+
+def test_recover_rejects_a_weak_new_password(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        auth_routes,
+        "reset_password_with_recovery_code",
+        lambda email, code, password: calls.append(email)
+    )
+
+    response = client.post(
+        "/api/auth/recover",
+        json={**RECOVER_REQUEST, "new_password": "short"}
+    )
+
+    assert response.status_code == 400
+    # Rejected before any code was checked.
+    assert calls == []
+
+
+def test_recover_gives_one_answer_for_every_failure(monkeypatch):
+    monkeypatch.setattr(
+        auth_routes,
+        "reset_password_with_recovery_code",
+        lambda email, code, password: False
+    )
+
+    response = client.post("/api/auth/recover", json=RECOVER_REQUEST)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == auth_routes.RECOVERY_FAILED_DETAIL
+
+
+def test_recover_with_a_valid_code(monkeypatch):
+    monkeypatch.setattr(
+        auth_routes,
+        "reset_password_with_recovery_code",
+        lambda email, code, password: True
+    )
+
+    response = client.post("/api/auth/recover", json=RECOVER_REQUEST)
+
+    assert response.status_code == 200
+
+
+def test_employee_cannot_issue_recovery_codes_for_others():
+    log_in_as(FAKE_EMPLOYEE)
+
+    response = client.post("/api/business/users/1/recovery-codes")
+
+    assert response.status_code == 403

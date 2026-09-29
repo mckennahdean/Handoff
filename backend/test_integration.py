@@ -11,8 +11,9 @@ skip themselves when TEST_DATABASE_URL is not set.
 """
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
+import jwt
 import pytest
 from dotenv import load_dotenv
 from fastapi import HTTPException
@@ -22,7 +23,8 @@ from sqlalchemy.orm import Session
 
 import backend.db_service as db_service
 import backend.auth_service as auth_service
-from backend.models import Base, Gap, ProcedureChunk, User
+from backend.models import Base, Gap, ProcedureChunk, RecoveryCode, User
+import backend.reset_password as reset_password
 import backend.seed_demo as seed_demo
 from backend.create_tables import create_tables
 
@@ -325,8 +327,8 @@ def test_create_tables_converts_old_timestamps_without_shifting_them(db):
             "TYPE TIMESTAMP WITHOUT TIME ZONE"
         ))
         connection.execute(text(
-            "INSERT INTO business (name, invite_code, created_at) "
-            "VALUES ('Test Cafe', 'TESTCODE', '2026-09-25 12:00:00')"
+            "INSERT INTO business (name, created_at) "
+            "VALUES ('Test Cafe', '2026-09-25 12:00:00')"
         ))
         connection.commit()
 
@@ -378,7 +380,7 @@ def test_owner_signup_stores_an_argon2_hash_never_the_password(auth_db):
 
     business = auth_service.get_business()
     assert business.name == "Test Cafe"
-    assert len(business.invite_code) == auth_service.INVITE_CODE_LENGTH
+    assert owner.status == "active"
 
 
 def test_login_gives_one_answer_for_wrong_password_and_unknown_email(
@@ -415,40 +417,6 @@ def test_login_gives_one_answer_for_wrong_password_and_unknown_email(
     assert checked[1] == auth_service.DUMMY_HASH
 
 
-def test_invite_codes_are_checked_against_the_database(auth_db):
-    # No business yet, so no code can be valid.
-    assert auth_service.invite_code_is_valid("ABCD2345") is False
-
-    auth_service.create_owner_account(
-        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
-    )
-    code = auth_service.get_business().invite_code
-
-    assert auth_service.invite_code_is_valid(code)
-    # Typed casually, with spaces and lowercase, it still works.
-    assert auth_service.invite_code_is_valid(f"  {code.lower()} ")
-    assert auth_service.invite_code_is_valid("WRONG234") is False
-
-    employee = auth_service.create_employee_account(
-        "Eddie Employee", "eddie@test.com", PASSWORD
-    )
-    assert employee.role == "employee"
-    assert auth_service.count_users() == 2
-
-
-def test_regenerating_the_invite_code_kills_the_old_one(auth_db):
-    auth_service.create_owner_account(
-        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
-    )
-    old_code = auth_service.get_business().invite_code
-
-    new_code = auth_service.regenerate_invite_code()
-
-    assert new_code != old_code
-    assert auth_service.invite_code_is_valid(old_code) is False
-    assert auth_service.invite_code_is_valid(new_code)
-
-
 def test_the_database_not_the_token_decides_who_you_are(auth_db):
     auth_service.create_owner_account(
         "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
@@ -456,6 +424,7 @@ def test_the_database_not_the_token_decides_who_you_are(auth_db):
     employee = auth_service.create_employee_account(
         "Eddie Employee", "eddie@test.com", PASSWORD
     )
+    auth_service.approve_user(employee.id)
 
     # A token issued while Eddie was an owner says role "owner".
     promoted = auth_service.set_user_role(employee.id, "owner")
@@ -480,3 +449,242 @@ def test_the_database_not_the_token_decides_who_you_are(auth_db):
         auth_service.get_current_user(credentials)
     assert refused.value.status_code == 401
     assert refused.value.detail == "User no longer exists."
+
+
+def test_five_failed_logins_pause_sign_in_for_fifteen_minutes(auth_db):
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+
+    for _ in range(auth_service.MAX_FAILED_LOGINS):
+        assert auth_service.authenticate_user(
+            "olive@test.com", "Wrong-Password-12"
+        ) is None
+
+    # Locked: even the correct password is refused.
+    assert auth_service.authenticate_user(
+        "olive@test.com", PASSWORD
+    ) is None
+
+    # Simulate the fifteen minutes passing.
+    with Session(auth_db) as session:
+        user = session.scalar(
+            select(User).where(User.email == "olive@test.com")
+        )
+        assert user.locked_until > datetime.now(timezone.utc)
+        user.locked_until = datetime.now(timezone.utc) - timedelta(seconds=1)
+        session.commit()
+
+    user = auth_service.authenticate_user("olive@test.com", PASSWORD)
+    assert user is not None
+    assert user.failed_login_attempts == 0
+    assert user.locked_until is None
+
+
+def test_a_successful_login_resets_the_failure_count(auth_db):
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+
+    for _ in range(auth_service.MAX_FAILED_LOGINS - 1):
+        auth_service.authenticate_user("olive@test.com", "Wrong-Password-12")
+
+    assert auth_service.authenticate_user(
+        "olive@test.com", PASSWORD
+    ) is not None
+
+    for _ in range(auth_service.MAX_FAILED_LOGINS - 1):
+        auth_service.authenticate_user("olive@test.com", "Wrong-Password-12")
+
+    # Eight failures in total, but never five in a row: not locked.
+    assert auth_service.authenticate_user(
+        "olive@test.com", PASSWORD
+    ) is not None
+
+
+def test_employee_accounts_wait_for_owner_approval(auth_db):
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    employee = auth_service.create_employee_account(
+        "Eddie Employee", "eddie@test.com", PASSWORD
+    )
+
+    assert employee.status == "pending"
+    assert auth_service.count_pending_users() == 1
+
+    approved = auth_service.approve_user(employee.id)
+
+    assert approved.status == "active"
+    assert auth_service.count_pending_users() == 0
+    assert auth_service.approve_user(9999) is None
+
+
+def test_a_token_for_a_pending_account_is_refused(auth_db):
+    # Pending accounts never receive a token; if one existed anyway,
+    # the server would still refuse it (defense in depth).
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    employee = auth_service.create_employee_account(
+        "Eddie Employee", "eddie@test.com", PASSWORD
+    )
+    credentials = HTTPAuthorizationCredentials(
+        scheme="Bearer",
+        credentials=auth_service.create_access_token(employee)
+    )
+
+    with pytest.raises(HTTPException) as refused:
+        auth_service.get_current_user(credentials)
+
+    assert refused.value.status_code == 403
+
+
+def test_recovery_codes_are_stored_hashed_and_work_once(auth_db):
+    owner = auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    assert auth_service.has_unused_recovery_codes(owner.id) is False
+
+    codes = auth_service.create_recovery_codes(owner.id)
+
+    assert len(codes) == auth_service.RECOVERY_CODE_COUNT
+    assert all(len(code) == 11 and code[5] == "-" for code in codes)
+    assert auth_service.has_unused_recovery_codes(owner.id) is True
+
+    with Session(auth_db) as session:
+        stored = session.scalars(select(RecoveryCode.code_hash)).all()
+    assert all(value.startswith("$argon2id$") for value in stored)
+    assert not any(code.replace("-", "") in value for code in codes for value in stored)
+
+    new_password = "New-Horse-Battery-8"
+
+    # Typed casually: lowercase, no dash, extra spaces.
+    casual = " " + codes[0].lower().replace("-", "") + " "
+    assert auth_service.reset_password_with_recovery_code(
+        "olive@test.com", casual, new_password
+    ) is True
+
+    assert auth_service.authenticate_user("olive@test.com", PASSWORD) is None
+    assert auth_service.authenticate_user(
+        "olive@test.com", new_password
+    ) is not None
+
+    # The same code never works twice.
+    assert auth_service.reset_password_with_recovery_code(
+        "olive@test.com", codes[0], PASSWORD
+    ) is False
+
+
+def test_wrong_recovery_codes_count_toward_the_lock(auth_db):
+    owner = auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    codes = auth_service.create_recovery_codes(owner.id)
+
+    for _ in range(auth_service.MAX_FAILED_LOGINS):
+        assert auth_service.reset_password_with_recovery_code(
+            "olive@test.com", "AAAAA-AAAAA", "New-Horse-Battery-8"
+        ) is False
+
+    # Locked: even a real code is refused, and so is the password.
+    assert auth_service.reset_password_with_recovery_code(
+        "olive@test.com", codes[0], "New-Horse-Battery-8"
+    ) is False
+    assert auth_service.authenticate_user("olive@test.com", PASSWORD) is None
+
+
+def test_a_new_set_replaces_the_old_one_and_leaves_with_the_account(auth_db):
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    employee = auth_service.create_employee_account(
+        "Eddie Employee", "eddie@test.com", PASSWORD
+    )
+    auth_service.approve_user(employee.id)
+
+    old_codes = auth_service.create_recovery_codes(employee.id)
+    new_codes = auth_service.create_recovery_codes(employee.id)
+
+    assert auth_service.reset_password_with_recovery_code(
+        "eddie@test.com", old_codes[0], "New-Horse-Battery-8"
+    ) is False
+    assert auth_service.reset_password_with_recovery_code(
+        "eddie@test.com", new_codes[0], "New-Horse-Battery-8"
+    ) is True
+
+    assert auth_service.create_recovery_codes(9999) is None
+
+    # ON DELETE CASCADE removes the codes with the account.
+    assert auth_service.delete_employee(employee.id) is True
+    assert count(auth_db, RecoveryCode) == 0
+
+
+def test_a_password_reset_ends_older_sessions(auth_db):
+    owner = auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    codes = auth_service.create_recovery_codes(owner.id)
+
+    # A session that started a minute ago (tokens record whole
+    # seconds, so an explicit earlier time keeps the test exact).
+    now = datetime.now(timezone.utc)
+    older_token = jwt.encode(
+        {
+            "sub": str(owner.id),
+            "role": "owner",
+            "iat": now - timedelta(minutes=1),
+            "exp": now + timedelta(hours=1)
+        },
+        auth_service.get_secret_key(),
+        algorithm=auth_service.ALGORITHM
+    )
+    older = HTTPAuthorizationCredentials(
+        scheme="Bearer", credentials=older_token
+    )
+
+    assert auth_service.get_current_user(older).id == owner.id
+
+    assert auth_service.reset_password_with_recovery_code(
+        "olive@test.com", codes[0], "New-Horse-Battery-8"
+    ) is True
+
+    with pytest.raises(HTTPException) as refused:
+        auth_service.get_current_user(older)
+    assert refused.value.status_code == 401
+
+    # Signing in again after the reset works normally.
+    user = auth_service.authenticate_user(
+        "olive@test.com", "New-Horse-Battery-8"
+    )
+    fresh = HTTPAuthorizationCredentials(
+        scheme="Bearer",
+        credentials=auth_service.create_access_token(user)
+    )
+    assert auth_service.get_current_user(fresh).id == owner.id
+
+
+def test_break_glass_unlocks_and_prints_new_codes(auth_db, capsys):
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+
+    for _ in range(auth_service.MAX_FAILED_LOGINS):
+        auth_service.authenticate_user("olive@test.com", "Wrong-Password-12")
+
+    assert reset_password.main(["reset_password", "OLIVE@test.com"]) == 0
+
+    printed = capsys.readouterr().out
+    codes = [
+        line.strip() for line in printed.splitlines()
+        if line.startswith("  ")
+    ]
+    assert len(codes) == auth_service.RECOVERY_CODE_COUNT
+
+    # The lock is cleared, and a printed code works on the login page.
+    assert auth_service.reset_password_with_recovery_code(
+        "olive@test.com", codes[0], "New-Horse-Battery-8"
+    ) is True
+
+    assert reset_password.main(["reset_password", "nobody@test.com"]) == 1
+    assert reset_password.main(["reset_password"]) == 2

@@ -14,7 +14,7 @@ flowchart LR
         Web["nginx<br/>serves the built app"]
         subgraph Backend["FastAPI backend"]
             Routes["main.py, auth_routes.py<br/>routes and role checks"]
-            Auth["auth_service.py<br/>Argon2, JWT, invite codes"]
+            Auth["auth_service.py<br/>Argon2, JWT, approval,<br/>recovery codes, throttling"]
             DBS["db_service.py<br/>all database access"]
             AI["gemini_service.py<br/>all AI calls"]
         end
@@ -115,7 +115,10 @@ The images published are the exact images that passed the smoke test. Publishing
 | Insert-only AI merge | The owner's words are authoritative; the AI may add, never rewrite | Trusting the AI's full rewrite |
 | Keep every question wording | Grouping measures topic, not intent; a wrong merge must never hide a question | Picking a stricter grouping threshold |
 | All AI calls in one module | Provider changes and error handling live in one place | Calling Gemini from each route |
-| JWT, Argon2, invite codes; user reloaded every request | Role changes and deletions take effect immediately | Server sessions |
+| Owner approval instead of a shared invite code | A shared code is a long-lived secret anyone can pass on; approval makes every account a per-person owner decision | Invite codes (the original design), single-use codes |
+| Recovery codes plus a server break-glass command | Self-service recovery without an email provider; codes are stored with Argon2, as NIST SP 800-63B requires for codes under 112 bits of entropy | Email reset (future work); security questions (rejected, NIST SP 800-63B) |
+| JWT, user reloaded every request, tokens older than a password reset refused | Role changes, deletions, and resets take effect immediately | Server sessions |
+| Temporary 15-minute pause after 5 failures, one generic message | Stops password guessing without letting an attacker lock an owner out for good, and never reveals which emails exist | Permanent lockout; showing remaining attempts |
 | Idempotent migrations on startup | Small schema changes, safe to rerun on every container start | Alembic (the choice at larger scale) |
 | Hard delete, reopening resolved gaps | Simple and honest for a small business | Archiving, which keeps an audit trail but touches every query |
 | Non-root containers, no secrets in images | Least privilege; `.env` is excluded from every build | Default root containers |
@@ -124,8 +127,9 @@ The images published are the exact images that passed the smoke test. Publishing
 
 | Table | Holds |
 |---|---|
-| `business` | The business name and its invite code |
-| `users` | Name, email, Argon2 password hash, and role (owner or employee) |
+| `business` | The business name |
+| `users` | Name, email, Argon2 password hash, role (owner or employee), status (pending or active), failed sign-in count and pause time, and when the password last changed |
+| `recovery_codes` | One-time recovery codes, stored only as Argon2 hashes, with when each was used; deleted automatically with the account |
 | `procedures` | Title, steps, warnings, status (pending or approved), version, last-confirmed date, capture method, and the capture-gap questions asked |
 | `procedure_chunks` | One row per step or warning, with its 3,072-dimension embedding; deleted automatically with its procedure |
 | `gaps` | An unanswered question, its embedding, closest match, times asked, other wordings, status, and the procedure that resolved it |

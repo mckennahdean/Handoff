@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { isLoggedIn } from '../api.js'
+import { apiFetch, isLoggedIn } from '../api.js'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -19,6 +19,23 @@ const router = createRouter({
       path: '/signup',
       name: 'signup',
       component: () => import('../views/SignupView.vue')
+    },
+
+    // Reset a forgotten password with a recovery code.
+    {
+      path: '/recover',
+      name: 'recover',
+      component: () => import('../views/RecoverAccountView.vue')
+    },
+
+    // Shown once after a first sign-in to save recovery codes.
+    {
+      path: '/recovery-codes',
+      name: 'recovery-codes',
+      component: () => import('../views/RecoveryCodesView.vue'),
+      meta: {
+        requiresAuth: true
+      }
     },
 
     // =========================================
@@ -107,6 +124,20 @@ const router = createRouter({
     },
 
     // =========================================
+    // Procedure Detail
+    // Read-only view, available to authenticated users
+    // =========================================
+
+    {
+      path: '/procedure',
+      name: 'procedure-detail',
+      component: () => import('../views/ProcedureDetailView.vue'),
+      meta: {
+        requiresAuth: true
+      }
+    },
+
+    // =========================================
     // Documentation Gaps
     // Owner-only gap management
     // =========================================
@@ -161,8 +192,13 @@ const router = createRouter({
 // Authentication / Role Guard
 // =========================================
 
-router.beforeEach((to) => {
-  // Retrieve the prototype session information.
+// Only the server can tell whether a token has been revoked (for
+// example by a password reset or a deleted account), so ask it once
+// per page load. A revoked session gets a 401, and apiFetch then
+// clears it and returns to the login page.
+let sessionChecked = false
+
+router.beforeEach(async (to) => {
   const loggedIn = isLoggedIn()
   const role = localStorage.getItem('userRole')
 
@@ -170,6 +206,16 @@ router.beforeEach((to) => {
   // pages that require a logged-in user.
   if (to.meta.requiresAuth && !loggedIn) {
     return '/login'
+  }
+
+  if (to.meta.requiresAuth && !sessionChecked) {
+    sessionChecked = true
+
+    try {
+      await apiFetch('/api/auth/me')
+    } catch {
+      // Server unreachable: each page shows its own error state.
+    }
   }
 
   // Prevent Employees from accessing Owner-only pages.
@@ -196,10 +242,10 @@ router.beforeEach((to) => {
   }
 
   // If an authenticated user tries to visit the
-  // Login or Signup page, send them to the
-  // appropriate dashboard.
+  // Login, Signup, or password reset page, send them
+  // to the appropriate dashboard.
   if (
-    (to.name === 'login' || to.name === 'signup') &&
+    ['login', 'signup', 'recover'].includes(to.name) &&
     loggedIn
   ) {
     if (role === 'owner') {
