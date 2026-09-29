@@ -289,6 +289,26 @@ def test_employee_cannot_view_pending_draft(monkeypatch):
 
     assert response.status_code == 404
 
+def test_employee_can_view_approved_procedure(monkeypatch):
+    main_module.app.dependency_overrides[get_current_user] = (
+        lambda: FAKE_EMPLOYEE
+    )
+
+    monkeypatch.setattr(
+        main_module,
+        "get_procedure",
+        lambda procedure_id: fake_procedure("approved")
+    )
+
+    response = client.get("/api/procedures/7")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["status"] == "approved"
+    assert data["steps"] == ["Step one."]
+    assert data["last_confirmed"] == "2026-09-24T12:00:00"
 
 def test_employee_procedure_list_excludes_drafts(monkeypatch):
     main_module.app.dependency_overrides[get_current_user] = (

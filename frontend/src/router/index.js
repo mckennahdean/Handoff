@@ -124,6 +124,20 @@ const router = createRouter({
     },
 
     // =========================================
+    // Procedure Detail
+    // Read-only view, available to authenticated users
+    // =========================================
+
+    {
+      path: '/procedure',
+      name: 'procedure-detail',
+      component: () => import('../views/ProcedureDetailView.vue'),
+      meta: {
+        requiresAuth: true
+      }
+    },
+
+    // =========================================
     // Documentation Gaps
     // Owner-only gap management
     // =========================================
