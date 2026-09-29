@@ -97,6 +97,7 @@ Images that pass are published to the GitHub Container Registry (`ghcr.io/mckenn
 | [Architecture](docs/architecture/) | Components, data flow, and design decisions |
 | [Evaluation](evaluation/README.md) | How accuracy, abstention, and latency were measured |
 | [Contributions](docs/CONTRIBUTIONS.md) | What each team member built |
+| [Security](SECURITY.md) | Threat model, each control with its test evidence, and residual risks |
 
 ## Technology
 
