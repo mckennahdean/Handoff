@@ -92,6 +92,27 @@ flowchart LR
 - **Grouping:** a new unanswered question joins an open gap when their similarity is at least 0.75. The gap stays open, and its "Asked N times" count goes up. Every distinct wording is kept ("Also Asked As"), because topic similarity cannot always tell two different questions apart.
 - **Dismissed gaps stay dismissed.** If an employee asks the same thing later, it opens a new gap, so a dismissal never silently swallows future questions.
 - **Auto-resolve** uses the same test as the Threshold Gate. Adding the Generation Gate here is planned (see Limitations in the [README](../../README.md#known-limitations)).
+
+## Account lifecycle
+
+```mermaid
+flowchart TD
+    S(["Employee<br/>signs up"]) --> Pending
+    F(["First account<br/>(owner)"]) --> Active
+    Pending -- "owner approves" --> Active
+    Pending -- "owner rejects" --> Removed
+    Active -- "5 failed<br/>sign-ins" --> Paused
+    Paused -- "15 minutes pass, or<br/>break-glass command" --> Active
+    Active -- "owner deletes<br/>employee" --> Removed
+    Active -.- N["Forgot password: reset with a recovery code.<br/>The account stays active; older sessions end."]
+```
+
+- **Pending accounts** cannot sign in or see anything, and at most 20 can wait at once.
+- **The pause is temporary on purpose.** A permanent lock would let anyone who knows an email lock that person out for good.
+- **A reset ends older sessions.** Resetting a password records when it changed, every token issued before that is refused, and the browser checks once per page load.
+- **Break-glass:** `python -m backend.reset_password <email>` on the server unlocks the account and prints new recovery codes.
+- **Changes apply on the next request.** Each request reloads the user from the database, so approvals, role changes, and deletions take effect immediately.
+
 ## Delivery: CI/CD
 
 ```mermaid
