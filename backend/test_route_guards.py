@@ -14,12 +14,14 @@ import backend.main as main_module
 
 client = TestClient(main_module.app)
 
-# Routes anyone may call: the health check, and how you get a token.
+# Routes anyone may call: the health check, how you get a token,
+# and account recovery (which proves identity with a recovery code).
 PUBLIC_ROUTES = {
     ("GET", "/"),
     ("GET", "/api/auth/setup-status"),
     ("POST", "/api/auth/signup"),
     ("POST", "/api/auth/login"),
+    ("POST", "/api/auth/recover"),
 }
 
 

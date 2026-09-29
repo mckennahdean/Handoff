@@ -13,13 +13,16 @@ from backend.auth_service import (
     create_access_token,
     create_employee_account,
     create_owner_account,
+    create_recovery_codes,
     delete_employee,
     get_current_user,
     get_user_by_email,
+    has_unused_recovery_codes,
     hash_password,
     list_users,
     password_problems,
     require_owner,
+    reset_password_with_recovery_code,
     set_user_role,
 )
 
@@ -43,6 +46,13 @@ class LoginRequest(BaseModel):
 class UserRoleUpdate(BaseModel):
     role: str
 
+
+class RecoverRequest(BaseModel):
+    email: str
+    recovery_code: str
+    new_password: str
+
+
 def normalize_email(email: str) -> str:
     return email.strip().lower()
 
@@ -61,7 +71,10 @@ def auth_response(user: User) -> dict:
     return {
         "access_token": create_access_token(user),
         "token_type": "bearer",
-        "user": user_to_dict(user)
+        "user": user_to_dict(user),
+        # True on a first sign-in (or after every code was used):
+        # the app then shows a fresh set of recovery codes once.
+        "needs_recovery_codes": not has_unused_recovery_codes(user.id)
     }
 
 
@@ -188,6 +201,48 @@ def me(user: User = Depends(get_current_user)):
     return user_to_dict(user)
 
 
+# ---------- Recovery codes ----------
+
+RECOVERY_FAILED_DETAIL = (
+    "That email and recovery code do not match, or the code was "
+    "already used. After 5 failed attempts, recovery is paused "
+    "for 15 minutes."
+)
+
+
+@router.post("/api/auth/recovery-codes")
+def new_recovery_codes(user: User = Depends(get_current_user)):
+    """Replace your own recovery codes. Shown once."""
+    return {"codes": create_recovery_codes(user.id)}
+
+
+@router.post("/api/auth/recover")
+def recover_account(request: RecoverRequest):
+    # Checking the new password first reveals nothing about
+    # whether the email or code is valid.
+    problems = password_problems(request.new_password)
+
+    if problems:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must contain " + ", ".join(problems) + "."
+        )
+
+    reset = reset_password_with_recovery_code(
+        normalize_email(request.email),
+        request.recovery_code,
+        request.new_password
+    )
+
+    if not reset:
+        raise HTTPException(
+            status_code=400,
+            detail=RECOVERY_FAILED_DETAIL
+        )
+
+    return {"message": "Password updated. You can now sign in."}
+
+
 # ---------- User management (owner only) ----------
 
 @router.get(
@@ -212,6 +267,24 @@ def approve_pending_user(user_id: int):
         )
 
     return user_to_dict(user)
+
+
+@router.post(
+    "/api/business/users/{user_id}/recovery-codes",
+    dependencies=[Depends(require_owner)]
+)
+def issue_recovery_codes(user_id: int):
+    """An owner issues a fresh set for someone who lost theirs.
+    The old set stops working immediately."""
+    codes = create_recovery_codes(user_id)
+
+    if codes is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found."
+        )
+
+    return {"codes": codes}
 
 
 @router.patch("/api/business/users/{user_id}/role")

@@ -209,3 +209,31 @@ class Business(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc)
     )
+
+
+class RecoveryCode(Base):
+    """One-time recovery codes. Only a hash of each code is stored,
+    so the plain codes exist only on the page that shows them once."""
+    __tablename__ = "recovery_codes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    # CASCADE: deleting an account deletes its recovery codes.
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True
+    )
+
+    code_hash: Mapped[str] = mapped_column(
+        String(255)
+    )
+
+    used_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+    )

@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 import backend.db_service as db_service
 import backend.auth_service as auth_service
-from backend.models import Base, Gap, ProcedureChunk, User
+from backend.models import Base, Gap, ProcedureChunk, RecoveryCode, User
 import backend.seed_demo as seed_demo
 from backend.create_tables import create_tables
 
@@ -536,3 +536,83 @@ def test_a_token_for_a_pending_account_is_refused(auth_db):
         auth_service.get_current_user(credentials)
 
     assert refused.value.status_code == 403
+
+
+def test_recovery_codes_are_stored_hashed_and_work_once(auth_db):
+    owner = auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    assert auth_service.has_unused_recovery_codes(owner.id) is False
+
+    codes = auth_service.create_recovery_codes(owner.id)
+
+    assert len(codes) == auth_service.RECOVERY_CODE_COUNT
+    assert all(len(code) == 11 and code[5] == "-" for code in codes)
+    assert auth_service.has_unused_recovery_codes(owner.id) is True
+
+    with Session(auth_db) as session:
+        stored = session.scalars(select(RecoveryCode.code_hash)).all()
+    assert all(value.startswith("$argon2id$") for value in stored)
+    assert not any(code.replace("-", "") in value for code in codes for value in stored)
+
+    new_password = "New-Horse-Battery-8"
+
+    # Typed casually: lowercase, no dash, extra spaces.
+    casual = " " + codes[0].lower().replace("-", "") + " "
+    assert auth_service.reset_password_with_recovery_code(
+        "olive@test.com", casual, new_password
+    ) is True
+
+    assert auth_service.authenticate_user("olive@test.com", PASSWORD) is None
+    assert auth_service.authenticate_user(
+        "olive@test.com", new_password
+    ) is not None
+
+    # The same code never works twice.
+    assert auth_service.reset_password_with_recovery_code(
+        "olive@test.com", codes[0], PASSWORD
+    ) is False
+
+
+def test_wrong_recovery_codes_count_toward_the_lock(auth_db):
+    owner = auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    codes = auth_service.create_recovery_codes(owner.id)
+
+    for _ in range(auth_service.MAX_FAILED_LOGINS):
+        assert auth_service.reset_password_with_recovery_code(
+            "olive@test.com", "AAAAA-AAAAA", "New-Horse-Battery-8"
+        ) is False
+
+    # Locked: even a real code is refused, and so is the password.
+    assert auth_service.reset_password_with_recovery_code(
+        "olive@test.com", codes[0], "New-Horse-Battery-8"
+    ) is False
+    assert auth_service.authenticate_user("olive@test.com", PASSWORD) is None
+
+
+def test_a_new_set_replaces_the_old_one_and_leaves_with_the_account(auth_db):
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    employee = auth_service.create_employee_account(
+        "Eddie Employee", "eddie@test.com", PASSWORD
+    )
+    auth_service.approve_user(employee.id)
+
+    old_codes = auth_service.create_recovery_codes(employee.id)
+    new_codes = auth_service.create_recovery_codes(employee.id)
+
+    assert auth_service.reset_password_with_recovery_code(
+        "eddie@test.com", old_codes[0], "New-Horse-Battery-8"
+    ) is False
+    assert auth_service.reset_password_with_recovery_code(
+        "eddie@test.com", new_codes[0], "New-Horse-Battery-8"
+    ) is True
+
+    assert auth_service.create_recovery_codes(9999) is None
+
+    # ON DELETE CASCADE removes the codes with the account.
+    assert auth_service.delete_employee(employee.id) is True
+    assert count(auth_db, RecoveryCode) == 0

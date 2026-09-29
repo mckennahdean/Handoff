@@ -424,3 +424,82 @@ def test_owner_can_approve_a_pending_account(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["status"] == "active"
+
+
+# ---------- Recovery codes ----------
+
+RECOVER_REQUEST = {
+    "email": "emp@test.com",
+    "recovery_code": "ABCDE-FGH23",
+    "new_password": STRONG_PASSWORD
+}
+
+
+def test_login_says_when_recovery_codes_are_needed(monkeypatch):
+    monkeypatch.setattr(
+        auth_routes,
+        "authenticate_user",
+        lambda email, password: FAKE_OWNER
+    )
+    monkeypatch.setattr(
+        auth_routes, "has_unused_recovery_codes", lambda user_id: False
+    )
+
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "owner@test.com", "password": STRONG_PASSWORD}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["needs_recovery_codes"] is True
+
+
+def test_recover_rejects_a_weak_new_password(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        auth_routes,
+        "reset_password_with_recovery_code",
+        lambda email, code, password: calls.append(email)
+    )
+
+    response = client.post(
+        "/api/auth/recover",
+        json={**RECOVER_REQUEST, "new_password": "short"}
+    )
+
+    assert response.status_code == 400
+    # Rejected before any code was checked.
+    assert calls == []
+
+
+def test_recover_gives_one_answer_for_every_failure(monkeypatch):
+    monkeypatch.setattr(
+        auth_routes,
+        "reset_password_with_recovery_code",
+        lambda email, code, password: False
+    )
+
+    response = client.post("/api/auth/recover", json=RECOVER_REQUEST)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == auth_routes.RECOVERY_FAILED_DETAIL
+
+
+def test_recover_with_a_valid_code(monkeypatch):
+    monkeypatch.setattr(
+        auth_routes,
+        "reset_password_with_recovery_code",
+        lambda email, code, password: True
+    )
+
+    response = client.post("/api/auth/recover", json=RECOVER_REQUEST)
+
+    assert response.status_code == 200
+
+
+def test_employee_cannot_issue_recovery_codes_for_others():
+    log_in_as(FAKE_EMPLOYEE)
+
+    response = client.post("/api/business/users/1/recovery-codes")
+
+    assert response.status_code == 403
