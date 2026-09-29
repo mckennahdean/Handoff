@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { isLoggedIn } from '../api.js'
+import { apiFetch, isLoggedIn } from '../api.js'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -178,8 +178,13 @@ const router = createRouter({
 // Authentication / Role Guard
 // =========================================
 
-router.beforeEach((to) => {
-  // Retrieve the prototype session information.
+// Only the server can tell whether a token has been revoked (for
+// example by a password reset or a deleted account), so ask it once
+// per page load. A revoked session gets a 401, and apiFetch then
+// clears it and returns to the login page.
+let sessionChecked = false
+
+router.beforeEach(async (to) => {
   const loggedIn = isLoggedIn()
   const role = localStorage.getItem('userRole')
 
@@ -187,6 +192,16 @@ router.beforeEach((to) => {
   // pages that require a logged-in user.
   if (to.meta.requiresAuth && !loggedIn) {
     return '/login'
+  }
+
+  if (to.meta.requiresAuth && !sessionChecked) {
+    sessionChecked = true
+
+    try {
+      await apiFetch('/api/auth/me')
+    } catch {
+      // Server unreachable: each page shows its own error state.
+    }
   }
 
   // Prevent Employees from accessing Owner-only pages.
