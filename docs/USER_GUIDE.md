@@ -120,7 +120,7 @@ You cannot change your own role, so a business always keeps at least one owner. 
 
 ### Ask Handoff
 
-Select **Ask Handoff**, type a question in your own words, and select **Ask**. **Use Example** fills in a sample question, and **Clear** starts over.
+Select **Ask Handoff**, type a question in your own words, and press **Enter** or select the **Ask Handoff** button. **Shift+Enter** adds a new line. **Use Example** fills in a sample question, and **Clear** starts over.
 
 You will see one of three results:
 
