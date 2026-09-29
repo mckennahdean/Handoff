@@ -21,6 +21,7 @@ Vue 3 application that provides the user interface for capturing procedures, rev
 - `CaptureProcedureView`: record, upload, or type a procedure for AI structuring.
 - `ProcedureReviewView`: owner review, capture gaps, and approval of AI-structured procedures.
 - `ProceduresView`: approved procedures (owners also see drafts).
+- `ProcedureDetailView`: read-only view of one approved procedure, opened with **View** from the Procedures page.
 - `QueryView`: ask Handoff questions and receive grounded answers.
 - `GapsView`: knowledge gaps from questions Handoff could not answer.
 - `NotFoundView`: custom 404 page with team pet photos.

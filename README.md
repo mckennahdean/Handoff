@@ -32,7 +32,7 @@ Measured offline on Maple & Main Coffee, a fictional coffee shop created for tes
 | Abstained when it should | 14 of 14 |
 | Answer quality | 28 fully correct, 1 partial, 0 invented facts |
 | Median response time | 1.3 to 3.6 seconds across two runs |
-| Automated tests | 109 passing, 89% line coverage (CI requires at least 70%) |
+| Automated tests | 110 passing, 89% line coverage (CI requires at least 70%) |
 
 ### Known limitations
 

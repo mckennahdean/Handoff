@@ -138,7 +138,7 @@ You will see one of three results:
 
 ### Read procedures
 
-**Procedures** lists every approved procedure, so you can read one from start to finish. Drafts the owner has not approved are never shown to employees.
+**Procedures** lists every approved procedure. Select **View** to read one from start to finish, including its warnings. Drafts the owner has not approved are never shown to employees.
 
 ## Frequently asked questions
 
