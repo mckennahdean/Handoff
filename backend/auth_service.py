@@ -102,15 +102,15 @@ def password_problems(password: str) -> list[str]:
 # ---------- Tokens ----------
 
 def create_access_token(user: User) -> str:
-    expires = (
-        datetime.now(timezone.utc)
-        + timedelta(hours=TOKEN_LIFETIME_HOURS)
-    )
+    now = datetime.now(timezone.utc)
 
     payload = {
         "sub": str(user.id),
         "role": user.role,
-        "exp": expires
+        # Issued-at time, compared with password_changed_at so a
+        # password reset ends every older session.
+        "iat": now,
+        "exp": now + timedelta(hours=TOKEN_LIFETIME_HOURS)
     }
 
     return jwt.encode(
@@ -374,6 +374,7 @@ def reset_password_with_recovery_code(
 
         match.used_at = now
         user.password_hash = hash_password(new_password)
+        user.password_changed_at = now
         user.failed_login_attempts = 0
         user.locked_until = None
         session.commit()
@@ -416,6 +417,20 @@ def get_current_user(
         raise HTTPException(
             status_code=401,
             detail="User no longer exists."
+        )
+
+    # A password reset ends every session that started before it,
+    # including one an attacker may have been using. Tokens record
+    # whole seconds, so compare in whole seconds.
+    issued_at = payload.get("iat")
+
+    if user.password_changed_at is not None and (
+        issued_at is None
+        or issued_at < int(user.password_changed_at.timestamp())
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Your password was changed. Please log in again."
         )
 
     # Defense in depth: pending accounts never receive a token,
@@ -465,6 +480,22 @@ def approve_user(user_id: int):
         session.refresh(user)
 
         return user
+
+
+def unlock_user(user_id: int):
+    """Clear failed attempts and any lock. Returns True, or None
+    if the user does not exist."""
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+
+        if user is None:
+            return None
+
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        session.commit()
+
+        return True
 
 
 def set_user_role(user_id: int, role: str):

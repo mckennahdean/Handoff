@@ -13,6 +13,7 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 
+import jwt
 import pytest
 from dotenv import load_dotenv
 from fastapi import HTTPException
@@ -23,6 +24,7 @@ from sqlalchemy.orm import Session
 import backend.db_service as db_service
 import backend.auth_service as auth_service
 from backend.models import Base, Gap, ProcedureChunk, RecoveryCode, User
+import backend.reset_password as reset_password
 import backend.seed_demo as seed_demo
 from backend.create_tables import create_tables
 
@@ -616,3 +618,73 @@ def test_a_new_set_replaces_the_old_one_and_leaves_with_the_account(auth_db):
     # ON DELETE CASCADE removes the codes with the account.
     assert auth_service.delete_employee(employee.id) is True
     assert count(auth_db, RecoveryCode) == 0
+
+
+def test_a_password_reset_ends_older_sessions(auth_db):
+    owner = auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+    codes = auth_service.create_recovery_codes(owner.id)
+
+    # A session that started a minute ago (tokens record whole
+    # seconds, so an explicit earlier time keeps the test exact).
+    now = datetime.now(timezone.utc)
+    older_token = jwt.encode(
+        {
+            "sub": str(owner.id),
+            "role": "owner",
+            "iat": now - timedelta(minutes=1),
+            "exp": now + timedelta(hours=1)
+        },
+        auth_service.get_secret_key(),
+        algorithm=auth_service.ALGORITHM
+    )
+    older = HTTPAuthorizationCredentials(
+        scheme="Bearer", credentials=older_token
+    )
+
+    assert auth_service.get_current_user(older).id == owner.id
+
+    assert auth_service.reset_password_with_recovery_code(
+        "olive@test.com", codes[0], "New-Horse-Battery-8"
+    ) is True
+
+    with pytest.raises(HTTPException) as refused:
+        auth_service.get_current_user(older)
+    assert refused.value.status_code == 401
+
+    # Signing in again after the reset works normally.
+    user = auth_service.authenticate_user(
+        "olive@test.com", "New-Horse-Battery-8"
+    )
+    fresh = HTTPAuthorizationCredentials(
+        scheme="Bearer",
+        credentials=auth_service.create_access_token(user)
+    )
+    assert auth_service.get_current_user(fresh).id == owner.id
+
+
+def test_break_glass_unlocks_and_prints_new_codes(auth_db, capsys):
+    auth_service.create_owner_account(
+        "Olive Owner", "olive@test.com", PASSWORD, "Test Cafe"
+    )
+
+    for _ in range(auth_service.MAX_FAILED_LOGINS):
+        auth_service.authenticate_user("olive@test.com", "Wrong-Password-12")
+
+    assert reset_password.main(["reset_password", "OLIVE@test.com"]) == 0
+
+    printed = capsys.readouterr().out
+    codes = [
+        line.strip() for line in printed.splitlines()
+        if line.startswith("  ")
+    ]
+    assert len(codes) == auth_service.RECOVERY_CODE_COUNT
+
+    # The lock is cleared, and a printed code works on the login page.
+    assert auth_service.reset_password_with_recovery_code(
+        "olive@test.com", codes[0], "New-Horse-Battery-8"
+    ) is True
+
+    assert reset_password.main(["reset_password", "nobody@test.com"]) == 1
+    assert reset_password.main(["reset_password"]) == 2

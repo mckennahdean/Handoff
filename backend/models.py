@@ -184,6 +184,12 @@ class User(Base):
         nullable=True
     )
 
+    # Set when a password is reset. Tokens issued earlier stop working.
+    password_changed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
     # "active" accounts can sign in; "pending" ones wait for owner approval.
     status: Mapped[str] = mapped_column(
         String(20),

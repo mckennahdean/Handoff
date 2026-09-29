@@ -74,6 +74,8 @@ def test_token_round_trip():
 
     assert payload["sub"] == "5"
     assert payload["role"] == "owner"
+    # Issued-at time, so a password reset can end older sessions.
+    assert payload["iat"] <= datetime.now(timezone.utc).timestamp()
 
 
 def test_expired_token_is_rejected():

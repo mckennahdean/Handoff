@@ -55,6 +55,7 @@ def create_tables(db_engine=engine):
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER NOT NULL DEFAULT 0;",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ;",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active';",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ;",
             "ALTER TABLE business DROP COLUMN IF EXISTS invite_code;",
         ]:
             conn.execute(text(statement))
