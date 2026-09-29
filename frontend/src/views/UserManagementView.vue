@@ -12,6 +12,10 @@ const error = ref('')
 const savingRoleId = ref(null)
 const deletingUserId = ref(null)
 const approvingUserId = ref(null)
+const issuingUserId = ref(null)
+
+// Recovery codes just issued by the owner, shown once.
+const issuedCodes = ref(null)
 
 const currentUser = getCurrentUser()
 
@@ -195,6 +199,54 @@ const rejectUser = (user) => removeAccount(
   `${user.name}'s request was rejected.`
 )
 
+// Give someone a fresh set of recovery codes, shown here once
+// so the owner can hand them over. The old set stops working.
+const issueCodes = async (user) => {
+  const confirmed = window.confirm(
+    `Create new recovery codes for ${user.name}? ` +
+    'Their old codes will stop working.'
+  )
+
+  if (!confirmed) {
+    return
+  }
+
+  issuingUserId.value = user.id
+  issuedCodes.value = null
+  message.value = ''
+  error.value = ''
+
+  try {
+    const response = await apiFetch(
+      `/api/business/users/${user.id}/recovery-codes`,
+      { method: 'POST' }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(
+        errorMessage(data, 'Unable to create recovery codes.')
+      )
+    }
+
+    issuedCodes.value = { name: user.name, codes: data.codes }
+  } catch (err) {
+    error.value = err.message || 'Unable to create recovery codes.'
+  } finally {
+    issuingUserId.value = null
+  }
+}
+
+const copyIssuedCodes = async () => {
+  try {
+    await navigator.clipboard.writeText(issuedCodes.value.codes.join('\n'))
+    message.value = 'Codes copied.'
+  } catch {
+    error.value = 'Copy failed. Please copy the codes manually.'
+  }
+}
+
 onMounted(loadUsers)
 </script>
 
@@ -234,6 +286,45 @@ onMounted(loadUsers)
         {{ error }}
       </p>
     </div>
+
+    <!-- Recovery codes the owner just issued, shown once -->
+    <section
+      v-if="issuedCodes"
+      class="content-card issued-codes"
+    >
+      <div class="section-heading">
+        <h2>New Recovery Codes for {{ issuedCodes.name }}</h2>
+
+        <p>
+          Give these to them directly. They are shown only once, and
+          each code works once on the login page.
+        </p>
+      </div>
+
+      <ol class="code-grid">
+        <li v-for="code in issuedCodes.codes" :key="code">
+          {{ code }}
+        </li>
+      </ol>
+
+      <div class="code-actions">
+        <button
+          type="button"
+          class="codes-button"
+          @click="copyIssuedCodes"
+        >
+          Copy Codes
+        </button>
+
+        <button
+          type="button"
+          class="approve-button"
+          @click="issuedCodes = null"
+        >
+          Done
+        </button>
+      </div>
+    </section>
 
     <!-- New signups waiting for an owner's decision -->
     <section class="content-card pending-requests">
@@ -357,22 +448,33 @@ onMounted(loadUsers)
             <option value="owner">Owner</option>
           </select>
 
-          <button
-            v-if="user.role === 'employee'"
-            class="danger-button"
-            type="button"
-            :disabled="deletingUserId === user.id"
-            @click="deleteEmployee(user)"
-          >
-            {{ deletingUserId === user.id ? 'Deleting...' : 'Delete' }}
-          </button>
+          <div class="row-actions">
+            <button
+              class="codes-button"
+              type="button"
+              :disabled="issuingUserId === user.id"
+              @click="issueCodes(user)"
+            >
+              {{ issuingUserId === user.id ? 'Creating...' : 'New Codes' }}
+            </button>
 
-          <span
-            v-else
-            class="owner-label"
-          >
-            Owner
-          </span>
+            <button
+              v-if="user.role === 'employee'"
+              class="danger-button"
+              type="button"
+              :disabled="deletingUserId === user.id"
+              @click="deleteEmployee(user)"
+            >
+              {{ deletingUserId === user.id ? 'Deleting...' : 'Delete' }}
+            </button>
+
+            <span
+              v-else
+              class="owner-label"
+            >
+              Owner
+            </span>
+          </div>
         </div>
       </div>
     </section>
@@ -510,7 +612,7 @@ onMounted(loadUsers)
 
 .user-row {
   display: grid;
-  grid-template-columns: 1.2fr 1.5fr 150px 110px;
+  grid-template-columns: 1.2fr 1.5fr 150px 210px;
   align-items: center;
   gap: 20px;
   min-height: 70px;
@@ -654,6 +756,64 @@ onMounted(loadUsers)
 .approve-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* =========================================
+   Recovery Codes
+   ========================================= */
+
+.issued-codes {
+  margin-bottom: 24px;
+  border-color: #275b4f;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.codes-button {
+  padding: 9px 14px;
+  border: 1px solid #275b4f;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #275b4f;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.codes-button:hover {
+  background: #275b4f;
+  color: #ffffff;
+}
+
+.codes-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.code-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 30px;
+  margin: 0 0 20px;
+  padding: 18px 18px 18px 42px;
+  border: 1px dashed #d8d2c8;
+  border-radius: 10px;
+  background: #faf8f4;
+  color: #275b4f;
+  font-family: 'Courier New', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.code-actions {
+  display: flex;
+  gap: 10px;
 }
 
 /* =========================================

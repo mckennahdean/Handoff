@@ -1,86 +1,85 @@
 <script setup>
-import { ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { apiFetch, saveSession, errorMessage } from '../api.js'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { apiFetch, errorMessage } from '../api.js'
 
 // Allows navigation between pages.
 const router = useRouter()
-const route = useRoute()
 
-// Stores the values entered into the login form.
+// Stores the values entered into the reset form.
 const email = ref('')
-const password = ref('')
+const recoveryCode = ref('')
+const newPassword = ref('')
+const confirmPassword = ref('')
 
-// Controls whether the password is visible.
+// Controls whether the password fields are visible.
 const showPassword = ref(false)
 
-// Pages that send people here can leave a short explanation.
-const arrivalMessages = {
-  pending:
-    'Account created. Your business owner needs to approve it ' +
-    'before you can sign in.',
-  recovered: 'Password updated. You can now sign in.'
-}
+// Same live rules as the sign-up page. The backend enforces them.
+const passwordChecks = computed(() => {
+  const value = newPassword.value
 
-// Displays a message after the user takes an action.
-const message = ref(
-  route.query.pending
-    ? arrivalMessages.pending
-    : route.query.recovered
-      ? arrivalMessages.recovered
-      : ''
+  return [
+    { label: 'At least 12 characters', met: value.length >= 12 },
+    { label: 'One uppercase letter', met: /[A-Z]/.test(value) },
+    { label: 'One lowercase letter', met: /[a-z]/.test(value) },
+    { label: 'One number', met: /[0-9]/.test(value) },
+    { label: 'One special character', met: /[^A-Za-z0-9]/.test(value) }
+  ]
+})
+
+const passwordIsValid = computed(() =>
+  passwordChecks.value.every((check) => check.met)
 )
 
-// Signs the user in through the Handoff backend.
-const signIn = async () => {
+// Displays a message after the user takes an action.
+const message = ref('')
+
+// Sets a new password with one of the user's recovery codes.
+const resetPassword = async () => {
   message.value = ''
 
+  if (newPassword.value !== confirmPassword.value) {
+    message.value = 'Passwords do not match. Please try again.'
+    return
+  }
+
+  if (!passwordIsValid.value) {
+    message.value =
+      'Please choose a password that meets all of the requirements.'
+    return
+  }
+
   try {
-    const response = await apiFetch('/api/auth/login', {
+    const response = await apiFetch('/api/auth/recover', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         email: email.value,
-        password: password.value
+        recovery_code: recoveryCode.value,
+        new_password: newPassword.value
       })
     })
 
     const data = await response.json()
 
     if (!response.ok) {
-      message.value = errorMessage(data, 'Unable to sign in.')
+      message.value = errorMessage(data, 'Unable to reset your password.')
       return
     }
 
-    saveSession(data.access_token, data.user)
-
-    // First sign-in (or every code used up): show a fresh set once.
-    if (data.needs_recovery_codes) {
-      router.push('/recovery-codes')
-      return
-    }
-
-    router.push(
-      data.user.role === 'owner'
-        ? '/owner-dashboard'
-        : '/employee-dashboard'
-    )
+    router.push({ path: '/login', query: { recovered: '1' } })
   } catch {
     message.value =
       'Unable to reach the Handoff server. Please try again.'
   }
 }
 
-// Sends the user to the sign-up page.
-const createAccount = () => {
-  router.push('/signup')
-}
-
-// Sends the user to the recovery-code password reset page.
-const goToRecover = () => {
-  router.push('/recover')
+// Returns the user to the login screen.
+const goToLogin = () => {
+  router.push('/login')
 }
 </script>
 
@@ -122,15 +121,16 @@ const goToRecover = () => {
 
           <!-- Heading -->
           <div class="heading-section">
-            <h1>Welcome Back</h1>
+            <h1>Reset Your Password</h1>
 
             <p>
-              Sign in to access your Handoff workspace.
+              Enter your email, one of your recovery codes, and a
+              new password. Each code works once.
             </p>
           </div>
 
-          <!-- Login form -->
-          <form @submit.prevent="signIn">
+          <!-- Reset form -->
+          <form @submit.prevent="resetPassword">
 
             <!-- Email -->
             <div class="form-group">
@@ -145,26 +145,31 @@ const goToRecover = () => {
               />
             </div>
 
-            <!-- Password -->
+            <!-- Recovery code -->
             <div class="form-group">
-              <div class="password-label-row">
-                <label for="password">Password</label>
+              <label for="recovery-code">Recovery Code</label>
 
-                <button
-                  type="button"
-                  class="forgot-button"
-                  @click="goToRecover"
-                >
-                  Forgot password?
-                </button>
-              </div>
+              <input
+                id="recovery-code"
+                v-model="recoveryCode"
+                type="text"
+                placeholder="For example, K7QPM-2XH9R"
+                autocomplete="off"
+                required
+              />
+            </div>
+
+            <!-- New password -->
+            <div class="form-group">
+              <label for="new-password">New Password</label>
 
               <div class="password-input">
                 <input
-                  id="password"
-                  v-model="password"
+                  id="new-password"
+                  v-model="newPassword"
                   :type="showPassword ? 'text' : 'password'"
-                  placeholder="Enter your password"
+                  placeholder="Choose a new password"
+                  autocomplete="new-password"
                   required
                 />
 
@@ -214,28 +219,53 @@ const goToRecover = () => {
 
                 </button>
               </div>
+
+              <!-- Live password requirements -->
+              <ul class="password-rules">
+                <li
+                  v-for="check in passwordChecks"
+                  :key="check.label"
+                  :class="{ met: check.met }"
+                >
+                  {{ check.met ? '✓' : '○' }} {{ check.label }}
+                </li>
+              </ul>
             </div>
 
-            <!-- Sign in button -->
+            <!-- Confirm new password -->
+            <div class="form-group">
+              <label for="confirm-password">Confirm New Password</label>
+
+              <input
+                id="confirm-password"
+                v-model="confirmPassword"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="Re-enter your new password"
+                autocomplete="new-password"
+                required
+              />
+            </div>
+
+            <!-- Reset button -->
             <button
               type="submit"
               class="signin-button"
             >
-              Sign In
+              Reset Password
             </button>
 
           </form>
 
-          <!-- Account creation -->
+          <!-- Back to sign in -->
           <div class="signup-link">
-            <span>Don't have an account?</span>
+            <span>Remembered it?</span>
 
             <button
               type="button"
               class="signup-link-button"
-              @click="createAccount"
+              @click="goToLogin"
             >
-              Create Account
+              Sign In
             </button>
           </div>
 
@@ -476,21 +506,21 @@ const goToRecover = () => {
 }
 
 
-.forgot-button {
+.password-rules {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin: 10px 0 0;
   padding: 0;
-  border: none;
-  background: none;
-  color: #275b4f;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
+  list-style: none;
+  color: #a0a0a0;
+  font-size: 12px;
 }
 
 
-.forgot-button:hover {
-  color: #d26f3d;
-  text-decoration: underline;
+.password-rules li.met {
+  color: #275b4f;
+  font-weight: 600;
 }
 
 

@@ -21,6 +21,23 @@ const router = createRouter({
       component: () => import('../views/SignupView.vue')
     },
 
+    // Reset a forgotten password with a recovery code.
+    {
+      path: '/recover',
+      name: 'recover',
+      component: () => import('../views/RecoverAccountView.vue')
+    },
+
+    // Shown once after a first sign-in to save recovery codes.
+    {
+      path: '/recovery-codes',
+      name: 'recovery-codes',
+      component: () => import('../views/RecoveryCodesView.vue'),
+      meta: {
+        requiresAuth: true
+      }
+    },
+
     // =========================================
     // Owner Dashboard
     // =========================================
@@ -196,10 +213,10 @@ router.beforeEach((to) => {
   }
 
   // If an authenticated user tries to visit the
-  // Login or Signup page, send them to the
-  // appropriate dashboard.
+  // Login, Signup, or password reset page, send them
+  // to the appropriate dashboard.
   if (
-    (to.name === 'login' || to.name === 'signup') &&
+    ['login', 'signup', 'recover'].includes(to.name) &&
     loggedIn
   ) {
     if (role === 'owner') {
