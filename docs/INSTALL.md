@@ -82,7 +82,9 @@ It takes about two minutes, because it pauses between procedures to stay under t
 
 Open http://localhost:8080 and sign up. **The first account becomes the owner.** Passwords need at least 12 characters, with uppercase and lowercase letters, a number, and a special character.
 
-To add employees, copy the invite code from the Team Access card on the owner dashboard. Employees enter it when they sign up.
+After you sign in for the first time, Handoff shows eight recovery codes once. Save them: each one can reset a forgotten password.
+
+Employees sign up on the same page. Their accounts wait for your approval: open **User Management** from the owner dashboard and select **Approve**.
 
 ### Stop and update
 
@@ -247,6 +249,20 @@ docker exec handoff-db pg_restore -U handoff_user -d handoff --clean /tmp/handof
 ## Troubleshooting
 
 **"JWT_SECRET_KEY is not configured" when signing up or logging in.** `.env` has no secret. Generate one as in [Step 1](#step-1-get-the-code-and-configure-it), then restart the backend.
+
+**"Your account is waiting for owner approval."** New employee accounts cannot sign in until an owner approves them under User Management.
+
+**"After 5 failed attempts, sign-in is paused for 15 minutes."** Wrong passwords or recovery codes pause that account for 15 minutes. Wait, then try again, or use **Forgot password?** with a recovery code once the pause ends.
+
+**Every owner is locked out, or the only owner lost their password and recovery codes.** Whoever runs the server can unlock the account and issue new recovery codes. With Docker:
+
+    docker exec handoff-backend python -m backend.reset_password owner@example.com
+
+In the developer setup, with the virtual environment active:
+
+    python -m backend.reset_password owner@example.com
+
+It prints eight new codes (the old set stops working). Use one under **Forgot password?** on the login page. This needs access to the server itself, so it adds no new way into Handoff.
 
 **"No module named ..." (for example `sqlalchemy` or `uvicorn`).** The virtual environment is not active in that terminal. Activate it as in [Every time you work on Handoff](#every-time-you-work-on-handoff); your prompt should begin with `(.venv)`.
 

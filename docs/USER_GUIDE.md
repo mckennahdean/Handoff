@@ -2,16 +2,22 @@
 
 Handoff has two kinds of accounts:
 
-- **Owners** capture procedures, review and approve them, and see the questions employees could not get answered.
+- **Owners** capture procedures, review and approve them, approve new employees, and see the questions employees could not get answered.
 - **Employees** ask questions and read approved procedures.
 
 ## Getting started
 
 **The first account becomes the owner.** Open Handoff, choose to sign up, and enter your name, email, a password, and your business name.
 
-**Employees join with an invite code.** The owner shares the code from the Team Access card on the owner dashboard. Employees enter it when they sign up.
+**Employees sign up, then wait for approval.** Employees sign up with their name, email, and a password. The account stays pending, and cannot sign in or see anything, until an owner approves it (see [Approve new employees](#7-approve-new-employees)).
 
 Passwords need at least 12 characters, with uppercase and lowercase letters, a number, and a special character. The signup page shows a checklist that updates as you type. A sign-in lasts 8 hours (one work shift).
+
+**Save your recovery codes.** The first time you sign in, Handoff shows eight recovery codes, once. Copy them, download them as a text file, or write them down, and keep them somewhere safe. Each code can reset a forgotten password one time.
+
+**Forgot your password?** On the login page, select **Forgot password?**, then enter your email, one recovery code, and a new password twice. Each code works once. Resetting your password also signs you out anywhere else you were still signed in. If you have lost your codes, ask an owner for a new set.
+
+**Too many wrong attempts.** After 5 wrong passwords or recovery codes in a row, sign-in is paused for 15 minutes. The message is the same whether or not an email has an account, so Handoff never reveals who has one.
 
 ## For owners
 
@@ -19,7 +25,7 @@ Passwords need at least 12 characters, with uppercase and lowercase letters, a n
 
 The dashboard shows three counts: **Procedures** (approved and searchable), **Pending Reviews** (drafts waiting for your approval), and **Knowledge Gaps** (open questions employees asked that Handoff could not answer). Below them are shortcuts to Capture a Procedure, Review Procedures, Knowledge Gaps, and Ask Handoff.
 
-<!-- screenshot: owner dashboard (hide or blur the invite code) -->
+<!-- screenshot: owner dashboard -->
 
 ### 1. Capture a procedure
 
@@ -83,18 +89,30 @@ Use **Search questions** and **Show** (All, Open, Resolved, Dismissed) to filter
 
 <!-- screenshot: knowledge gap with Asked N times and Also Asked As -->
 
-### 7. Team access
+### 7. Approve new employees
 
-On the dashboard's Team Access card, **Copy Code** copies the invite code to share with employees. **New Code** replaces it: the old code stops working immediately, which is useful if a code was shared by mistake. Existing accounts are not affected.
+On the owner dashboard, select the **User Management** tab. New signups appear under **Waiting for Approval**.
+
+- **Approve**: the person can sign in right away.
+- **Reject**: deletes the pending account.
+
+Check that each name is someone you actually hired before approving. Pending accounts cannot see or do anything, and up to 20 can wait at once. If someone signs up with an email that already has an account, they see the usual "waiting for approval" message but no new request appears, so signup can never be used to find out who has an account.
+
+<!-- screenshot: Waiting for Approval with Approve and Reject -->
 
 ### 8. Manage users
 
-On the owner dashboard, select the **User Management** tab to see everyone with access to your business.
+The **Users** list on the same page shows everyone who can sign in.
 
 - **Role**: change a person between **Employee** and **Owner**. Handoff asks you to confirm first, because owners can approve and delete procedures, see knowledge gaps, and manage every account.
+- **New Codes**: create a fresh set of recovery codes for someone who lost theirs. The codes are shown once; give them to the person directly. Their old codes stop working immediately.
 - **Delete**: permanently remove an employee's account. They lose access on their very next action, even if Handoff is still open on their screen.
 
 You cannot change your own role, so a business always keeps at least one owner. Owner accounts cannot be deleted; change the person to Employee first.
+
+**Keep a second owner.** Give a trusted person, such as a shift manager, the Owner role. Then someone can always approve new employees and issue recovery codes while you are away.
+
+**If every owner is locked out**, for example a sole owner who lost both their password and their recovery codes, whoever runs the Handoff server can issue new codes. See [Troubleshooting](INSTALL.md#troubleshooting) in the install guide.
 
 ## For employees
 
@@ -121,6 +139,12 @@ You will see one of three results:
 **Procedures** lists every approved procedure, so you can read one from start to finish. Drafts the owner has not approved are never shown to employees.
 
 ## Frequently asked questions
+
+**I signed up but cannot sign in.**
+Your account is waiting for an owner to approve it. Ask your manager or the business owner.
+
+**I forgot my password and lost my recovery codes.**
+Ask an owner to select **New Codes** next to your name in User Management, then use one of the new codes under **Forgot password?**.
 
 **Why didn't Handoff answer a question when the procedure clearly covers it?**
 Usually the wording. In testing, "What time does the cafe open?" was answered, but "What time does the store open?" fell just short, because the procedure only said "cafe." The question appeared as a knowledge gap, the owner added "store" to the procedure, and approving it resolved the gap automatically.
