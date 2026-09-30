@@ -130,7 +130,7 @@ The images published are the exact images that passed the smoke test. Publishing
 
 | Decision | Why | Alternative considered |
 |---|---|---|
-| Embed each step and warning separately | One embedding per procedure diluted its meaning; chunking raised correct retrieval from 26 of 28 to 28 of 28 and best accuracy from 83% to 98% | Whole-procedure embeddings, with and without task types |
+| Embed each step and warning separately | One embedding per procedure diluted its meaning; chunking raised correct retrieval from 27 of 29 to 29 of 29 and best accuracy from 84% to 98% | Whole-procedure embeddings, with and without task types |
 | Two abstention gates | No threshold alone stops on-topic, undocumented questions without blocking real answers | Threshold only |
 | Answer threshold 0.68 | Midpoint of the measured gap between the highest near miss (0.670) and lowest correct answer (0.691) | 0.70, the original guess |
 | Insert-only AI merge | The owner's words are authoritative; the AI may add, never rewrite | Trusting the AI's full rewrite |
