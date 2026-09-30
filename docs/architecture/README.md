@@ -92,6 +92,27 @@ flowchart LR
 - **Grouping:** a new unanswered question joins an open gap when their similarity is at least 0.75. The gap stays open, and its "Asked N times" count goes up. Every distinct wording is kept ("Also Asked As"), because topic similarity cannot always tell two different questions apart.
 - **Dismissed gaps stay dismissed.** If an employee asks the same thing later, it opens a new gap, so a dismissal never silently swallows future questions.
 - **Auto-resolve** uses the same test as the Threshold Gate. Adding the Generation Gate here is planned (see Limitations in the [README](../../README.md#known-limitations)).
+
+## Account lifecycle
+
+```mermaid
+flowchart TD
+    S(["Employee<br/>signs up"]) --> Pending
+    F(["First account<br/>(owner)"]) --> Active
+    Pending -- "owner approves" --> Active
+    Pending -- "owner rejects" --> Removed
+    Active -- "5 failed<br/>sign-ins" --> Paused
+    Paused -- "15 minutes pass, or<br/>break-glass command" --> Active
+    Active -- "owner deletes<br/>employee" --> Removed
+    Active -.- N["Forgot password: reset with a recovery code.<br/>The account stays active; older sessions end."]
+```
+
+- **Pending accounts** cannot sign in or see anything, and at most 20 can wait at once.
+- **The pause is temporary on purpose.** A permanent lock would let anyone who knows an email lock that person out for good.
+- **A reset ends older sessions.** Resetting a password records when it changed, every token issued before that is refused, and the browser checks once per page load.
+- **Break-glass:** `python -m backend.reset_password <email>` on the server unlocks the account and prints new recovery codes.
+- **Changes apply on the next request.** Each request reloads the user from the database, so approvals, role changes, and deletions take effect immediately.
+
 ## Delivery: CI/CD
 
 ```mermaid
@@ -109,7 +130,7 @@ The images published are the exact images that passed the smoke test. Publishing
 
 | Decision | Why | Alternative considered |
 |---|---|---|
-| Embed each step and warning separately | One embedding per procedure diluted its meaning; chunking raised correct retrieval from 26 of 28 to 28 of 28 and best accuracy from 83% to 98% | Whole-procedure embeddings, with and without task types |
+| Embed each step and warning separately | One embedding per procedure diluted its meaning; chunking raised correct retrieval from 27 of 29 to 29 of 29 and best accuracy from 84% to 98% | Whole-procedure embeddings, with and without task types |
 | Two abstention gates | No threshold alone stops on-topic, undocumented questions without blocking real answers | Threshold only |
 | Answer threshold 0.68 | Midpoint of the measured gap between the highest near miss (0.670) and lowest correct answer (0.691) | 0.70, the original guess |
 | Insert-only AI merge | The owner's words are authoritative; the AI may add, never rewrite | Trusting the AI's full rewrite |

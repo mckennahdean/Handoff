@@ -5,8 +5,8 @@ import { clearSession } from '../api.js'
 
 const router = useRouter()
 
-// Get the user's role from the frontend prototype session.
-// This will eventually come from the Handoff backend.
+// Get the user's role, saved in browser storage when they signed in.
+// This only decides which links to show; the server checks the role on every request.
 const role = ref(localStorage.getItem('userRole'))
 
 // Determine whether the current user is an Owner.
@@ -21,7 +21,7 @@ const dashboardPath = computed(() => {
     : '/employee-dashboard'
 })
 
-// Log the user out of the frontend prototype.
+// Log the user out by clearing the saved session.
 const logout = () => {
   clearSession()
 
