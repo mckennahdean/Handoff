@@ -138,7 +138,7 @@ const router = createRouter({
     },
 
     // =========================================
-    // Documentation Gaps
+    // Knowledge Gaps
     // Owner-only gap management
     // =========================================
 

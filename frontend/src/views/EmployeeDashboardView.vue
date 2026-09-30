@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-// Gets the current user's information from the frontend prototype session.
+// Get the signed-in user's information, saved in browser storage when they signed in.
 const storedUser = localStorage.getItem('handoffUser')
 
 const user = storedUser
