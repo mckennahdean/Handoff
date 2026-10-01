@@ -50,7 +50,7 @@ Handoff was built by a three-person team for UMGC CMSC 495, Computer Science Cap
 - Built user management: an owner-only page and API for listing accounts, changing roles, and deleting employee accounts (PR #7).
 - Built the custom 404 page with randomized team pet photos, removing embedded photo metadata (EXIF) before committing them.
 
-> _[One decision and why, and one lesson learned.]_
+> *Decision:* I chose to build the frontend around a consistent Vue structure and reusable page patterns so the different parts of Handoff would feel like one application instead of separate screens. *Lesson:* I learned that establishing a solid interface structure early can make it much easier to extend an application later when backend functionality and new features are added.
 
 ## Renata Gabdrakhmanova, Integration Lead
 
