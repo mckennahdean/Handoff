@@ -101,8 +101,8 @@ flowchart TD
     F(["First account<br/>(owner)"]) --> Active
     Pending -- "owner approves" --> Active
     Pending -- "owner rejects" --> Removed
-    Active -- "5 failed<br/>sign-ins" --> Paused
-    Paused -- "15 minutes pass, or<br/>break-glass command" --> Active
+    Active -- "5 failed<br/>sign-ins" --> Paused["Paused<br/>for 15 minutes, or until<br/>the break-glass command"]
+    Paused --> Active
     Active -- "owner deletes<br/>employee" --> Removed
     Active -.- N["Forgot password: reset with a recovery code.<br/>The account stays active; older sessions end."]
 ```
