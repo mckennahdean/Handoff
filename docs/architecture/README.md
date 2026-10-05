@@ -159,10 +159,73 @@ All timestamps are stored with time zones (UTC).
 
 ## At larger scale
 
-- **Vector index:** retrieval currently compares against every chunk, which is fast at this size. A pgvector HNSW index needs 2,000 dimensions or fewer for the `vector` type, so it would require `halfvec` or shorter embeddings.
+This section answers the Unit 3 design feedback: how Handoff would serve 10,000 concurrent users. **It is a design, not something built or load-tested.** Today each service runs as a single container, which suits one small business. The point of this design is that the current architecture can grow into it without a rewrite.
+
+**The real bottleneck is the AI provider, not our servers.** If 10,000 signed-in users each asked one question every 10 minutes, that would be about 1,000 questions a minute. Each one needs an embedding call, and most need a generation call. The Gemini free tier allows 15 generation requests a minute, so production would need a paid tier first.
+
+| Layer | Today | At 10,000 concurrent users |
+|---|---|---|
+| Traffic | One backend container | A load balancer spreading requests across several backend containers |
+| API servers | One server process per container | Several worker processes per container, and more containers as load grows. This works because the API is stateless: sign-in uses signed tokens rather than server-side sessions, and login throttling counts live in the database, so any container can serve any request |
+| Database connections | SQLAlchemy's built-in pool in each process | Pool sizes set so that containers times workers times pool size stays under PostgreSQL's connection limit, with PgBouncer in front of the database |
+| Slow AI work | Transcription, structuring, and merging run inside the request | A job queue (for example, Redis with background workers), so API workers stay free and the browser checks back for the result |
+| Repeated questions | Every question is embedded and answered fresh | A cache of question embeddings and answers, cleared whenever a procedure is approved or deleted |
+| AI provider limits | Free tier, with retry and clear error messages | A paid tier, a quota per business, and the job queue smoothing out bursts |
+| Retrieval | Every chunk is compared with the question | A pgvector HNSW index, which needs 2,000 dimensions or fewer for the `vector` type, so it would require `halfvec` or shorter embeddings |
+| Abuse protection | Sign-in pauses per account | Throttling per address as well, at the load balancer |
+
+Other changes at this scale:
+
 - **Top-k retrieval:** sending the best two or three procedures to the AI would help questions whose answers span procedures.
 - **Migrations:** Alembic instead of startup migrations.
 - **Multiple businesses:** each install currently serves one business.
+- **Proof before promises:** a load test (for example, with k6 or Locust) would confirm these limits before any capacity claim is made.
+
+## External-service resilience
+
+Handoff depends on one outside service, Google Gemini, for transcription, structuring, embeddings, and answers. The strategy is to retry only what can succeed, tell the truth when it cannot, and never lose the user's work.
+
+- **One module owns every AI call** (`backend/gemini_service.py`), so retry and error handling live in one place, and changing providers touches one file.
+- **Temporary failures are retried with exponential backoff.** When Google is briefly overloaded, the call waits a little longer between each attempt.
+- **Quota errors and bad requests are not retried.** Retrying them only wastes time and quota.
+- **Errors become clear responses.** A usage limit returns `429` and an outage returns `503`, each with a message the user can act on. The app never shows a raw Google error.
+- **Outages are reported honestly.** If the AI fails while answering, Handoff does not claim it logged a knowledge gap, and it does not guess an answer.
+- **Work is never lost.** If structuring fails after a recording was transcribed, the transcript moves into the text box, so a retry skips transcription.
+- **AI output is checked, not trusted.** JSON mode keeps responses well-formed, and the insert-only check rejects any merge that rewrites the owner's steps.
+- **Models are configurable** in `.env`, so a model change or retirement needs no code change.
+
+Next steps: request timeouts, a circuit breaker that pauses AI calls during a long outage, and a fallback model or provider.
+
+## Technical debt: repaid and deferred
+
+This section answers the Unit 5 feedback: which debt was repaid, and what each deferred item costs if it stays unresolved.
+
+### Repaid
+
+| Debt | How it was repaid | Pull request |
+|---|---|---|
+| Drafts stored only in the browser, which caused a review-page bug | Drafts saved in the database, with the Approval Gate enforced by the server | #5 |
+| Timestamps stored without time zones, shown hours off | Converted to time-zone-aware columns with a migration that is safe to rerun | #5 |
+| A JWT secret published in `.env.example` | Rotated, then removed from the example; a missing secret now stops the app instead of running insecurely | #5, #6 |
+| An AI endpoint that answered without a login | Login required, plus a test that checks every route, including future ones | #6 |
+| A database layer at 25% test coverage | Integration tests against a real PostgreSQL database, raising it above 90% | #5 to #9 |
+| A shared invite code that never expired | Replaced with owner approval of every new account | #10 |
+| Employees unable to open procedures the user guide promised | A read-only procedure view, with a test | #10 |
+| An unused page, outdated comments, and mismatched numbers in the docs | Removed or corrected | #11 |
+
+### Deferred
+
+| Debt | Cost of leaving it unresolved |
+|---|---|
+| Auto-resolve uses only the first answer gate | **Reliability.** A gap can be marked resolved when nothing answers it. This happened in testing: approving an edit to Closing the Cafe falsely resolved the descale gap, which would hide a real employee question from the owner |
+| No database retry at startup | **Reliability.** After a reboot, the backend can start before the database and fail until the restart policy brings it back |
+| Sign-in throttling per account only | **Security.** An attacker can try one common password across many accounts without triggering any account's pause |
+| No Content-Security-Policy header | **Security.** The session token lives in browser storage, so any future script-injection flaw could steal it; a CSP limits the damage |
+| One shared HS256 signing secret | **Security.** Anyone holding the secret can create valid tokens, and rotating it signs everyone out |
+| No audit log | **Security and maintenance.** There is no record of who approved, deleted, or changed what |
+| No automated frontend tests | **Maintenance.** Interface regressions are caught only by the manual walkthrough. The server enforces every rule, so they cannot become security bugs |
+| Startup migrations instead of Alembic | **Deployment.** There is no way to roll a schema change back, and the risk grows with the schema |
+| No email | **Support.** A user who loses their recovery codes needs the owner or the server administrator to get back in |
 
 ## Original design (Week 4)
 
