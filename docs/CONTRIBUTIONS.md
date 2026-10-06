@@ -2,11 +2,13 @@
 
 Handoff was built by a three-person team for UMGC CMSC 495, Computer Science Capstone (Fall 2026).
 
-| Member | Role |
-|---|---|
-| Thomas Dean | Lead Architect |
-| McKenna Dean | Interface Designer |
-| Renata Gabdrakhmanova | Integration Lead |
+| Member | Role | GitHub |
+|---|---|---|
+| Thomas Dean | Lead Architect | [@aryante88](https://github.com/aryante88) |
+| McKenna Dean | Interface Designer | [@mckennahdean](https://github.com/mckennahdean) |
+| Renata Gabdrakhmanova | Integration Lead | [@renata110803](https://github.com/renata110803) |
+
+Commits, pull requests, and reviews on GitHub appear under these usernames.
 
 ## How we worked
 
@@ -78,13 +80,14 @@ Feedback on the Unit 3 design specification and the Unit 5 alpha release shaped 
 - Merged pull request #1.
 
 > *Decision:* I chose to focus on connecting the backend services, database, and Gemini AI so the different parts of Handoff could work together instead of functioning separately. *Lesson:* I learned that integration requires a lot of testing and troubleshooting, because even when individual components work correctly, problems can still happen when they are connected.
+
 ## Commit summary
 
 From `git shortlog -sn --no-merges` on the final branch. Merge commits are left out, because GitHub credits each merge to whoever clicks the button rather than to the work itself.
 
 | Member | Commits |
 |---|---|
-| Thomas Dean | 136 |
+| Thomas Dean | 137 |
 | McKenna Dean | 15 |
 | Renata Gabdrakhmanova | 11 |
 
